@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Activity, FileText, Upload, Users } from "lucide-react"
 import Link from "next/link"
 import { DashboardHeader } from "@/components/dashboard/header"
-import apiClient, { type AssessmentRecord } from "@/lib/aws-api.service"
+import apiClient, {AssessmentRecord} from "@/lib/aws-api.service";
 
 export default function Dashboard() {
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
