@@ -219,7 +219,7 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/cases/${caseItem.id}`}>View</Link>
+                      <Link href={`cases/${caseItem.id}`}>View</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -267,7 +267,7 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
                     {score !== null && <Progress value={(score / maxScore) * 100} className="h-2" />}
                   </div>
                   <Button className="w-full mt-4" asChild>
-                    <Link href={`/cases/${caseItem.id}`}>View Details</Link>
+                    <Link href={`cases/${caseItem.id}`}>View Details</Link>
                   </Button>
                 </CardContent>
               </Card>
