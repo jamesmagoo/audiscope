@@ -14,7 +14,7 @@ export default function CasePage({ params }: CasePageProps) {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <DashboardHeader
-        title={`Case #${params.id}`}
+        title={`Case #${params?.id}`}
         description="Assessment details and results"
         action={
           <div className="flex items-center gap-2">
@@ -36,7 +36,7 @@ export default function CasePage({ params }: CasePageProps) {
         }
       />
 
-      <CaseDetails id={params.id} />
+      <CaseDetails id={params!.id} />
     </div>
   )
 }

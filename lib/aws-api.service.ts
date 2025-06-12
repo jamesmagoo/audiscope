@@ -233,8 +233,9 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
     throw new Error("API endpoint not configured")
   }
 
-  const url = new URL(`${API_BASE_URL}/records`)
-  url.searchParams.append("fileId", id)
+  // TODO -- need to add uid to the request here as it's needed for queries
+  const url = new URL(`${API_BASE_URL}/records/${id}`)
+  // url.searchParams.append("fileId", id)
 
   const response = await fetch(url.toString())
 
