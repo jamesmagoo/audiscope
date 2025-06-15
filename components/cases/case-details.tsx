@@ -161,6 +161,7 @@ export function CaseDetails({ id }: CaseDetailsProps) {
         setError(null)
         // Use the records endpoint for detailed view
         const data = await apiClient.getRecordById(id)
+        console.log(JSON.stringify(data))
         setCaseDetails(data)
       } catch (err) {
         console.error("Error fetching case details:", err)
@@ -308,7 +309,7 @@ export function CaseDetails({ id }: CaseDetailsProps) {
                         Key Strengths
                       </h4>
                       <ul className="space-y-1">
-                        {overall_assessment.key_strengths.map((strength, index) => (
+                        {overall_assessment.key_strengths.map((strength : any, index : any) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
                             <CheckCircle2 className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0" />
                             {strength}
@@ -326,7 +327,7 @@ export function CaseDetails({ id }: CaseDetailsProps) {
                         Areas for Improvement
                       </h4>
                       <ul className="space-y-1">
-                        {overall_assessment.areas_for_improvement.map((area, index) => (
+                        {overall_assessment.areas_for_improvement.map((area : string, index : string) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
                             <CircleAlert className="h-3 w-3 text-amber-600 mt-0.5 flex-shrink-0" />
                             {area}
@@ -394,7 +395,7 @@ export function CaseDetails({ id }: CaseDetailsProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {overall_assessment.action_plan.map((action, index) => (
+                {overall_assessment.action_plan.map((action : string, index : string) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center justify-center w-6 h-6 bg-primary text-primary-foreground rounded-full text-xs font-semibold flex-shrink-0">
                       {index + 1}

@@ -24,17 +24,17 @@ export interface FileUploadResponse {
 
 // Assessment types
 export interface AssessmentData {
-  id?: string // Optional for creation, present after submission
-  uid?: string // Will be added automatically
+  id?: string
+  uid?: string
   lead_surgeon: string
   team_member_count: number
   notes?: string
   assessor_name: string
   assessment_date: string
-  staging_key?: string // Will be set during upload
+  staging_key?: string
   audio_file_id: string
-  submission_date?: string // Will be set automatically
-  status?: string // e.g., "TRANSCRIBING", "COMPLETED", "PENDING"
+  submission_date?: string
+  status?: string
   created_at?: string
   updated_at?: string
   analysis?: string
@@ -234,8 +234,8 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
   }
 
   // TODO -- need to add uid to the request here as it's needed for queries
+  // TODO : we will need an uth provider for AWS Cognito users - signup - login - etc.
   const url = new URL(`${API_BASE_URL}/records/${id}`)
-  // url.searchParams.append("fileId", id)
 
   const response = await fetch(url.toString())
 
