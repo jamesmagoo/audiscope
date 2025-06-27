@@ -1,669 +1,706 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import {useEffect, useState} from "react"
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
+import {Badge} from "@/components/ui/badge"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion"
 import {
-  CheckCircle2,
-  CircleAlert,
-  CircleX,
-  Loader2,
-  AlertCircle,
-  Calendar,
-  Target,
-  TrendingUp,
-  Eye,
-  EyeOff,
-  MessageSquare,
+    AlertCircle,
+    Calendar,
+    CheckCircle2,
+    CircleAlert,
+    CircleX,
+    Eye,
+    EyeOff,
+    Loader2,
+    MessageSquare,
+    Target,
+    TrendingUp,
 } from "lucide-react"
-import apiClient, { type AssessmentRecord } from "@/lib/aws-api.service"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import apiClient, {type AssessmentRecord} from "@/lib/aws-api.service"
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert"
+import {Button} from "@/components/ui/button"
 import Link from "next/link"
 
 interface CaseDetailsProps {
-  id: string
+    id: string
 }
 
-// Helper function to parse assessment results
 const parseAssessmentResults = (record: AssessmentRecord) => {
-  const defaultResult = {
-    overall_assessment: null as any,
-    rating_definitions: null as any,
-    categories: null as any,
-    transcript: [] as any[],
-    score: null as number | null,
-    maxScore: 12,
-  }
-
-  if (!record.analysis || record.status !== "COMPLETED") {
-    return defaultResult
-  }
-
-  try {
-    const analysisObj = JSON.parse(record.analysis)
-
-    // Parse transcript from transcript_block if available
-    let transcript: any[] = []
-    if (record.transcript_block) {
-      try {
-        transcript = JSON.parse(record.transcript_block)
-      } catch (e) {
-        console.error("Error parsing transcript:", e)
-      }
-    }
-
-    // Handle both the old format (with score/skills) and new format (with overall_assessment/categories)
-    if (analysisObj.overall_assessment && analysisObj.categories) {
-      // New EVeNTs format
-      return {
-        overall_assessment: analysisObj.overall_assessment || null,
-        rating_definitions: analysisObj.rating_definitions || null,
-        categories: analysisObj.categories || null,
-        transcript: transcript,
-        score: null,
+    const defaultResult = {
+        overall_assessment: null as any,
+        rating_definitions: null as any,
+        categories: null as any,
+        transcript: [] as any[],
+        score: null as number | null,
         maxScore: 12,
-      }
-    } else if (analysisObj.score !== undefined && analysisObj.skills) {
-      // Legacy format - convert to display format
-      return {
-        overall_assessment: null,
-        rating_definitions: null,
-        categories: null,
-        transcript: transcript,
-        score: analysisObj.score,
-        maxScore: analysisObj.maxScore || 12,
-      }
     }
 
-    return defaultResult
-  } catch (e) {
-    console.error("Error parsing analysis:", e)
-    return defaultResult
-  }
+    if (!record.analysis || record.status !== "COMPLETED") {
+        return defaultResult
+    }
+
+    // Add this at the start of parseAssessmentResults for debugging
+    console.log("Raw record.analysis:", record.analysis);
+    console.log("Type of record.analysis:", typeof record.analysis);
+    console.log("JSON.stringify(record.analysis):", JSON.stringify(record.analysis, null, 2));
+
+    try {
+        // ✅ Check if analysis is already an object or needs parsing
+        let analysisObj: any;
+
+        if (typeof record.analysis === 'string') {
+            // Legacy case: analysis is still stored as string
+            analysisObj = JSON.parse(record.analysis);
+        } else {
+            // New case: analysis is already a parsed object from backend
+            analysisObj = record.analysis;
+        }
+
+        // Parse transcript from transcript_block if available
+        let transcript: any[] = []
+        if (record.transcript_block) {
+            try {
+                // Handle transcript_block which might still be a string
+                if (typeof record.transcript_block === 'string') {
+                    transcript = JSON.parse(record.transcript_block)
+                } else {
+                    transcript = record.transcript_block
+                }
+            } catch (e) {
+                console.error("Error parsing transcript:", e)
+            }
+        }
+
+        // Handle both the old format (with score/skills) and new format (with overall_assessment/categories)
+        if (analysisObj.assessment?.overall_assessment && analysisObj.assessment?.categories) {
+            // New EVeNTs format - note the nested structure
+            return {
+                overall_assessment: analysisObj.assessment.overall_assessment || null,
+                rating_definitions: analysisObj.assessment.rating_definitions || null,
+                categories: analysisObj.assessment.categories || null,
+                transcript: transcript,
+                score: null,
+                maxScore: 12,
+            }
+        }
+
+        return defaultResult
+    } catch (e) {
+        console.error("Error parsing analysis:", e)
+        console.error("Record analysis type:", typeof record.analysis)
+        console.error("Record analysis value:", record.analysis)
+        return defaultResult
+    }
 }
 
 // Function to get status display text
 const getStatusDisplay = (status: string) => {
-  switch (status) {
-    case "COMPLETED":
-      return "Completed"
-    case "TRANSCRIBING":
-      return "Processing"
-    case "PENDING":
-      return "Pending"
-    case "ERROR":
-      return "Error"
-    default:
-      return status
-  }
+    switch (status) {
+        case "COMPLETED":
+            return "Completed"
+        case "TRANSCRIBING":
+            return "Processing"
+        case "PENDING":
+            return "Pending"
+        case "ERROR":
+            return "Error"
+        default:
+            return status
+    }
 }
 
 // Function to get status variant
 const getStatusVariant = (status: string): "default" | "secondary" | "destructive" => {
-  switch (status) {
-    case "COMPLETED":
-      return "default"
-    case "ERROR":
-      return "destructive"
-    default:
-      return "secondary"
-  }
+    switch (status) {
+        case "COMPLETED":
+            return "default"
+        case "ERROR":
+            return "destructive"
+        default:
+            return "secondary"
+    }
 }
 
 // Function to get rating color and label
 const getRatingDisplay = (rating: number | null) => {
-  if (rating === null) return { color: "text-muted-foreground", label: "N/A", bgColor: "bg-muted" }
+    if (rating === null) return {color: "text-muted-foreground", label: "N/A", bgColor: "bg-muted"}
 
-  switch (rating) {
-    case 4:
-      return { color: "text-green-600", label: "Good", bgColor: "bg-green-100" }
-    case 3:
-      return { color: "text-blue-600", label: "Acceptable", bgColor: "bg-blue-100" }
-    case 2:
-      return { color: "text-amber-600", label: "Marginal", bgColor: "bg-amber-100" }
-    case 1:
-      return { color: "text-red-600", label: "Poor", bgColor: "bg-red-100" }
-    default:
-      return { color: "text-muted-foreground", label: "Unknown", bgColor: "bg-muted" }
-  }
+    switch (rating) {
+        case 4:
+            return {color: "text-green-600", label: "Good", bgColor: "bg-green-100"}
+        case 3:
+            return {color: "text-blue-600", label: "Acceptable", bgColor: "bg-blue-100"}
+        case 2:
+            return {color: "text-amber-600", label: "Marginal", bgColor: "bg-amber-100"}
+        case 1:
+            return {color: "text-red-600", label: "Poor", bgColor: "bg-red-100"}
+        default:
+            return {color: "text-muted-foreground", label: "Unknown", bgColor: "bg-muted"}
+    }
 }
 
 // Function to format category names for display
 const formatCategoryName = (categoryKey: string) => {
-  return categoryKey
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
+    return categoryKey
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
 }
 
 // Function to format element names for display
 const formatElementName = (elementKey: string) => {
-  return elementKey
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
+    return elementKey
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
 }
 
-export function CaseDetails({ id }: CaseDetailsProps) {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [caseDetails, setCaseDetails] = useState<AssessmentRecord | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showOnlyObserved, setShowOnlyObserved] = useState(true)
+export function CaseDetails({id}: CaseDetailsProps) {
+    const [activeTab, setActiveTab] = useState("overview")
+    const [caseDetails, setCaseDetails] = useState<AssessmentRecord | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [showOnlyObserved, setShowOnlyObserved] = useState(true)
 
-  useEffect(() => {
-    async function fetchCaseDetails() {
-      try {
-        setLoading(true)
-        setError(null)
-        // Use the records endpoint for detailed view
-        const data = await apiClient.getRecordById(id)
-        console.log(JSON.stringify(data))
-        setCaseDetails(data)
-      } catch (err) {
-        console.error("Error fetching case details:", err)
-        setError(err instanceof Error ? err.message : "Failed to load case details")
-      } finally {
-        setLoading(false)
-      }
+    useEffect(() => {
+        async function fetchCaseDetails() {
+            try {
+                setLoading(true)
+                setError(null)
+                // Use the records endpoint for detailed view
+                const data = await apiClient.getRecordById(id)
+                console.log(JSON.stringify(data))
+                setCaseDetails(data)
+            } catch (err) {
+                console.error("Error fetching case details:", err)
+                setError(err instanceof Error ? err.message : "Failed to load case details")
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchCaseDetails()
+    }, [id])
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                <span className="ml-2">Loading case details...</span>
+            </div>
+        )
     }
 
-    fetchCaseDetails()
-  }, [id])
+    if (error || !caseDetails) {
+        return (
+            <Alert variant="destructive">
+                <AlertDescription>{error || "Failed to load case details"}</AlertDescription>
+            </Alert>
+        )
+    }
 
-  if (loading) {
+    // Parse the assessment results
+    const {overall_assessment, rating_definitions, categories, transcript, score, maxScore} =
+        parseAssessmentResults(caseDetails)
+
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading case details...</span>
-      </div>
-    )
-  }
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                <TabsTrigger value="skills">Skills Breakdown</TabsTrigger>
+            </TabsList>
 
-  if (error || !caseDetails) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error || "Failed to load case details"}</AlertDescription>
-      </Alert>
-    )
-  }
+            <TabsContent value="overview" className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Assessment Information</CardTitle>
+                            <CardDescription>Key details about this assessment</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Case ID</p>
+                                    <p className="font-mono text-sm">{caseDetails.id}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                                    <Badge
+                                        variant={getStatusVariant(caseDetails.status)}>{getStatusDisplay(caseDetails.status)}</Badge>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Lead Surgeon</p>
+                                    <p>{caseDetails.lead_surgeon}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Team Size</p>
+                                    <p>{caseDetails.team_member_count} members</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Assessor</p>
+                                    <p>{caseDetails.assessor_name}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Assessment Date</p>
+                                    <p>{new Date(caseDetails.assessment_date).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Created</p>
+                                    <p>{new Date(caseDetails.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                                    <p>{new Date(caseDetails.updated_at).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            {caseDetails.notes && (
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Notes</p>
+                                    <p className="text-sm mt-1">{caseDetails.notes}</p>
+                                </div>
+                            )}
+                            <Button className="w-full mt-4" asChild>
+                                <Link href={`/dashboard/cases/${caseDetails.id}`}>View Details</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
 
-  // Parse the assessment results
-  const { overall_assessment, rating_definitions, categories, transcript, score, maxScore } =
-    parseAssessmentResults(caseDetails)
-
-  return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="transcript">Transcript</TabsTrigger>
-        <TabsTrigger value="skills">Skills Breakdown</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="overview" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Assessment Information</CardTitle>
-              <CardDescription>Key details about this assessment</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Case ID</p>
-                  <p className="font-mono text-sm">{caseDetails.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge variant={getStatusVariant(caseDetails.status)}>{getStatusDisplay(caseDetails.status)}</Badge>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Lead Surgeon</p>
-                  <p>{caseDetails.lead_surgeon}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Team Size</p>
-                  <p>{caseDetails.team_member_count} members</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Assessor</p>
-                  <p>{caseDetails.assessor_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Assessment Date</p>
-                  <p>{new Date(caseDetails.assessment_date).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Created</p>
-                  <p>{new Date(caseDetails.created_at).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                  <p>{new Date(caseDetails.updated_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-              {caseDetails.notes && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                  <p className="text-sm mt-1">{caseDetails.notes}</p>
-                </div>
-              )}
-              <Button className="w-full mt-4" asChild>
-                <Link href={`/dashboard/cases/${caseDetails.id}`}>View Details</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Assessment Score</CardTitle>
-              <CardDescription>Overall performance evaluation</CardDescription>
-            </CardHeader>
-            {/* Assessment Score */}
-            <CardContent className="space-y-6">
-              {overall_assessment ? (
-                <>
-                  {/* EVeNTs Format - Overall Rating */}
-                  <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <div
-                        className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${getRatingDisplay(overall_assessment.overall_rating).bgColor} mb-3`}
-                      >
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Assessment Score</CardTitle>
+                            <CardDescription>Overall performance evaluation</CardDescription>
+                        </CardHeader>
+                        {/* Assessment Score */}
+                        <CardContent className="space-y-6">
+                            {overall_assessment ? (
+                                <>
+                                    {/* EVeNTs Format - Overall Rating */}
+                                    <div className="flex items-center justify-center py-6">
+                                        <div className="text-center">
+                                            <div
+                                                className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${getRatingDisplay(overall_assessment.overall_rating).bgColor} mb-3`}
+                                            >
                         <span
-                          className={`text-3xl font-bold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
+                            className={`text-3xl font-bold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
                         >
                           {overall_assessment.overall_rating || "N/A"}
                         </span>
-                      </div>
-                      <div
-                        className={`text-lg font-semibold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
-                      >
-                        {getRatingDisplay(overall_assessment.overall_rating).label}
-                      </div>
-                      {rating_definitions && overall_assessment.overall_rating && (
-                        <p className="text-xs text-muted-foreground mt-2 max-w-xs">
-                          {rating_definitions[overall_assessment.overall_rating.toString()]}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Rest of EVeNTs format display... */}
-                  {/* Overall Feedback */}
-                  {overall_assessment.overall_feedback && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold">Overall Feedback</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {overall_assessment.overall_feedback}
-                      </p>
-                    </div>
-                  )}
+                                            </div>
+                                            <div
+                                                className={`text-lg font-semibold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
+                                            >
+                                                {getRatingDisplay(overall_assessment.overall_rating).label}
+                                            </div>
+                                            {rating_definitions && overall_assessment.overall_rating && (
+                                                <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+                                                    {rating_definitions[overall_assessment.overall_rating.toString()]}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Rest of EVeNTs format display... */}
+                                    {/* Overall Feedback */}
+                                    {overall_assessment.overall_feedback && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-semibold">Overall Feedback</h4>
+                                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                                {overall_assessment.overall_feedback}
+                                            </p>
+                                        </div>
+                                    )}
 
-                  {/* Key Strengths */}
-                  {overall_assessment.key_strengths && overall_assessment.key_strengths.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        Key Strengths
-                      </h4>
-                      <ul className="space-y-1">
-                        {overall_assessment.key_strengths.map((strength : any, index : any) => (
-                          <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <CheckCircle2 className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0" />
-                            {strength}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                                    {/* Key Strengths */}
+                                    {overall_assessment.key_strengths && overall_assessment.key_strengths.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-semibold flex items-center gap-2">
+                                                <TrendingUp className="h-4 w-4 text-green-600"/>
+                                                Key Strengths
+                                            </h4>
+                                            <ul className="space-y-1">
+                                                {overall_assessment.key_strengths.map((strength: any, index: any) => (
+                                                    <li key={index}
+                                                        className="text-sm text-muted-foreground flex items-start gap-2">
+                                                        <CheckCircle2
+                                                            className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0"/>
+                                                        {strength}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
 
-                  {/* Areas for Improvement */}
-                  {overall_assessment.areas_for_improvement && overall_assessment.areas_for_improvement.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <Target className="h-4 w-4 text-amber-600" />
-                        Areas for Improvement
-                      </h4>
-                      <ul className="space-y-1">
-                        {overall_assessment.areas_for_improvement.map((area : string, index : string) => (
-                          <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <CircleAlert className="h-3 w-3 text-amber-600 mt-0.5 flex-shrink-0" />
-                            {area}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                                    {/* Areas for Improvement */}
+                                    {overall_assessment.areas_for_improvement && overall_assessment.areas_for_improvement.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-semibold flex items-center gap-2">
+                                                <Target className="h-4 w-4 text-amber-600"/>
+                                                Areas for Improvement
+                                            </h4>
+                                            <ul className="space-y-1">
+                                                {overall_assessment.areas_for_improvement.map((area: string, index: string) => (
+                                                    <li key={index}
+                                                        className="text-sm text-muted-foreground flex items-start gap-2">
+                                                        <CircleAlert
+                                                            className="h-3 w-3 text-amber-600 mt-0.5 flex-shrink-0"/>
+                                                        {area}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
 
-                  {/* Follow-up Information */}
-                  {overall_assessment.follow_up_required && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-semibold text-blue-900">Follow-up Required</span>
-                      </div>
-                      {overall_assessment.follow_up_date && (
-                        <p className="text-sm text-blue-700">
-                          Scheduled for: {new Date(overall_assessment.follow_up_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : score !== null ? (
-                <>
-                  {/* Legacy Format - Numerical Score */}
-                  <div className="flex items-center justify-center py-6">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-3">
+                                    {/* Follow-up Information */}
+                                    {overall_assessment.follow_up_required && (
+                                        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Calendar className="h-4 w-4 text-blue-600"/>
+                                                <span
+                                                    className="text-sm font-semibold text-blue-900">Follow-up Required</span>
+                                            </div>
+                                            {overall_assessment.follow_up_date && (
+                                                <p className="text-sm text-blue-700">
+                                                    Scheduled
+                                                    for: {new Date(overall_assessment.follow_up_date).toLocaleDateString()}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            ) : score !== null ? (
+                                <>
+                                    {/* Legacy Format - Numerical Score */}
+                                    <div className="flex items-center justify-center py-6">
+                                        <div className="text-center">
+                                            <div
+                                                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-3">
                         <span className="text-3xl font-bold text-primary">
                           {score}/{maxScore}
                         </span>
-                      </div>
-                      <div className="text-lg font-semibold text-primary">
-                        Score: {Math.round((score / maxScore) * 100)}%
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <p className="text-muted-foreground">
-                      {caseDetails.status === "COMPLETED"
-                        ? "Assessment completed but no evaluation available"
-                        : "Assessment pending completion"}
-                    </p>
-                    {caseDetails.status === "TRANSCRIBING" && (
-                      <p className="text-sm text-muted-foreground mt-2">Processing audio and generating analysis...</p>
-                    )}
-                  </div>
+                                            </div>
+                                            <div className="text-lg font-semibold text-primary">
+                                                Score: {Math.round((score / maxScore) * 100)}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="text-center">
+                                        <p className="text-muted-foreground">
+                                            {caseDetails.status === "COMPLETED"
+                                                ? "Assessment completed but no evaluation available"
+                                                : "Assessment pending completion"}
+                                        </p>
+                                        {caseDetails.status === "TRANSCRIBING" && (
+                                            <p className="text-sm text-muted-foreground mt-2">Processing audio and
+                                                generating analysis...</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Action Plan */}
-        {overall_assessment?.action_plan && overall_assessment.action_plan.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Action Plan</CardTitle>
-              <CardDescription>Recommended next steps for improvement</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {overall_assessment.action_plan.map((action : string, index : string) => (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center justify-center w-6 h-6 bg-primary text-primary-foreground rounded-full text-xs font-semibold flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <p className="text-sm">{action}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                {/* Action Plan */}
+                {overall_assessment?.action_plan && overall_assessment.action_plan.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Action Plan</CardTitle>
+                            <CardDescription>Recommended next steps for improvement</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {overall_assessment.action_plan.map((action: string, index: string) => (
+                                    <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                                        <div
+                                            className="flex items-center justify-center w-6 h-6 bg-primary text-primary-foreground rounded-full text-xs font-semibold flex-shrink-0">
+                                            {index + 1}
+                                        </div>
+                                        <p className="text-sm">{action}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
-        {caseDetails.error_message && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Processing Error</AlertTitle>
-            <AlertDescription>{caseDetails.error_message}</AlertDescription>
-          </Alert>
-        )}
-      </TabsContent>
+                {caseDetails.error_message && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4"/>
+                        <AlertTitle>Processing Error</AlertTitle>
+                        <AlertDescription>{caseDetails.error_message}</AlertDescription>
+                    </Alert>
+                )}
+            </TabsContent>
 
-      <TabsContent value="transcript" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Session Transcript</CardTitle>
-            <CardDescription>Recorded dialogue from the assessment session</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {transcript && transcript.length > 0 ? (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {transcript.map((entry: any, index: number) => (
-                  <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">
-                    <div className="w-16 flex-shrink-0 text-sm text-muted-foreground font-mono">{entry.time}</div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{entry.speaker}</p>
-                      <p className="text-sm mt-1">{entry.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-muted-foreground">
-                  {caseDetails.status === "COMPLETED"
-                    ? "No transcript available for this assessment"
-                    : "Transcript will be available once processing is complete"}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
+            <TabsContent value="transcript" className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Session Transcript</CardTitle>
+                        <CardDescription>Recorded dialogue from the assessment session</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {transcript && transcript.length > 0 ? (
+                            <div className="space-y-4 max-h-96 overflow-y-auto">
+                                {transcript.map((entry: any, index: number) => (
+                                    <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">
+                                        <div
+                                            className="w-16 flex-shrink-0 text-sm text-muted-foreground font-mono">{entry.time}</div>
+                                        <div className="flex-1">
+                                            <p className="font-medium text-sm">{entry.speaker}</p>
+                                            <p className="text-sm mt-1">{entry.text}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center">
+                                <p className="text-muted-foreground">
+                                    {caseDetails.status === "COMPLETED"
+                                        ? "No transcript available for this assessment"
+                                        : "Transcript will be available once processing is complete"}
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
-      <TabsContent value="skills" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Skills Assessment</CardTitle>
-                <CardDescription>Detailed breakdown of non-technical skills evaluation</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowOnlyObserved(!showOnlyObserved)}
-                className="flex items-center gap-2"
-              >
-                {showOnlyObserved ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                {showOnlyObserved ? "Show All" : "Show Observed Only"}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {categories ? (
-              <div className="space-y-6">
-                {Object.entries(categories).map(([categoryKey, category]: [string, any]) => (
-                  <Card key={categoryKey} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{formatCategoryName(categoryKey)}</h3>
-                          <div
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getRatingDisplay(category.category_rating).bgColor}`}
-                          >
+            <TabsContent value="skills" className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Skills Assessment</CardTitle>
+                                <CardDescription>Detailed breakdown of non-technical skills evaluation</CardDescription>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowOnlyObserved(!showOnlyObserved)}
+                                className="flex items-center gap-2"
+                            >
+                                {showOnlyObserved ? <Eye className="h-4 w-4"/> : <EyeOff className="h-4 w-4"/>}
+                                {showOnlyObserved ? "Show All" : "Show Observed Only"}
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {categories ? (
+                            <div className="space-y-6">
+                                {Object.entries(categories).map(([categoryKey, category]: [string, any]) => (
+                                    <Card key={categoryKey} className="border-l-4 border-l-primary">
+                                        <CardHeader className="pb-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <h3 className="text-lg font-semibold">{formatCategoryName(categoryKey)}</h3>
+                                                    <div
+                                                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${getRatingDisplay(category.category_rating).bgColor}`}
+                                                    >
                             <span className={`text-sm font-bold ${getRatingDisplay(category.category_rating).color}`}>
                               {category.category_rating || "N/A"}
                             </span>
-                          </div>
-                          <Badge variant="outline" className={getRatingDisplay(category.category_rating).color}>
-                            {getRatingDisplay(category.category_rating).label}
-                          </Badge>
-                        </div>
-                      </div>
-                      {category.category_feedback_notes && (
-                        <div className="mt-2 p-3 bg-muted/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground">{category.category_feedback_notes}</p>
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <Accordion type="multiple" className="w-full">
-                        {Object.entries(category.elements).map(([elementKey, element]: [string, any]) => (
-                          <AccordionItem key={elementKey} value={elementKey}>
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-center justify-between w-full pr-4">
-                                <div className="flex items-center gap-3">
-                                  <span className="font-medium">{formatElementName(elementKey)}</span>
-                                  <div
-                                    className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${getRatingDisplay(element.element_rating).bgColor}`}
-                                  >
+                                                    </div>
+                                                    <Badge variant="outline"
+                                                           className={getRatingDisplay(category.category_rating).color}>
+                                                        {getRatingDisplay(category.category_rating).label}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            {category.category_feedback_notes && (
+                                                <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                                                    <p className="text-sm text-muted-foreground">{category.category_feedback_notes}</p>
+                                                </div>
+                                            )}
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Accordion type="multiple" className="w-full">
+                                                {Object.entries(category.elements).map(([elementKey, element]: [string, any]) => (
+                                                    <AccordionItem key={elementKey} value={elementKey}>
+                                                        <AccordionTrigger className="hover:no-underline">
+                                                            <div
+                                                                className="flex items-center justify-between w-full pr-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <span
+                                                                        className="font-medium">{formatElementName(elementKey)}</span>
+                                                                    <div
+                                                                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${getRatingDisplay(element.element_rating).bgColor}`}
+                                                                    >
                                     <span
-                                      className={`text-xs font-bold ${getRatingDisplay(element.element_rating).color}`}
+                                        className={`text-xs font-bold ${getRatingDisplay(element.element_rating).color}`}
                                     >
                                       {element.element_rating || "N/A"}
                                     </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="space-y-4 pt-2">
-                                {/* Element Feedback */}
-                                {element.feedback_notes && (
-                                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <MessageSquare className="h-4 w-4 text-blue-600" />
-                                      <span className="text-sm font-semibold text-blue-900">Element Feedback</span>
-                                    </div>
-                                    <p className="text-sm text-blue-700">{element.feedback_notes}</p>
-                                  </div>
-                                )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent>
+                                                            <div className="space-y-4 pt-2">
+                                                                {/* Element Feedback */}
+                                                                {element.feedback_notes && (
+                                                                    <div
+                                                                        className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <MessageSquare
+                                                                                className="h-4 w-4 text-blue-600"/>
+                                                                            <span
+                                                                                className="text-sm font-semibold text-blue-900">Element Feedback</span>
+                                                                        </div>
+                                                                        <p className="text-sm text-blue-700">{element.feedback_notes}</p>
+                                                                    </div>
+                                                                )}
 
-                                {/* Good Behaviors */}
-                                {element.observed_behaviors?.good_behaviors &&
-                                  element.observed_behaviors.good_behaviors.length > 0 && (
-                                    <div>
-                                      <h5 className="text-sm font-semibold text-green-700 mb-3 flex items-center gap-2">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                        Good Behaviors
-                                      </h5>
-                                      <div className="space-y-2">
-                                        {element.observed_behaviors.good_behaviors
-                                          .filter((behavior: any) => !showOnlyObserved || behavior.observed)
-                                          .map((behavior: any, index: number) => (
-                                            <div
-                                              key={behavior.behavior_code}
-                                              className={`p-3 rounded-lg border ${
-                                                behavior.observed
-                                                  ? "bg-green-50 border-green-200"
-                                                  : "bg-gray-50 border-gray-200"
-                                              }`}
-                                            >
-                                              <div className="flex items-start gap-3">
-                                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                  {behavior.observed ? (
-                                                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                                  ) : (
-                                                    <CircleX className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                                  )}
-                                                  <div className="min-w-0 flex-1">
-                                                    <p
-                                                      className={`text-sm font-medium ${behavior.observed ? "text-green-900" : "text-gray-600"}`}
-                                                    >
-                                                      {behavior.description}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                      Code: {behavior.behavior_code}
-                                                    </p>
-                                                    {behavior.notes && (
-                                                      <p
-                                                        className={`text-xs mt-2 ${behavior.observed ? "text-green-700" : "text-gray-500"}`}
-                                                      >
-                                                        {behavior.notes}
-                                                      </p>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                                <Badge
-                                                  variant={behavior.observed ? "default" : "secondary"}
-                                                  className="text-xs"
-                                                >
-                                                  {behavior.observed ? "Observed" : "Not Observed"}
-                                                </Badge>
-                                              </div>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    </div>
-                                  )}
+                                                                {/* Good Behaviors */}
+                                                                {element.observed_behaviors?.good_behaviors &&
+                                                                    element.observed_behaviors.good_behaviors.length > 0 && (
+                                                                        <div>
+                                                                            <h5 className="text-sm font-semibold text-green-700 mb-3 flex items-center gap-2">
+                                                                                <CheckCircle2 className="h-4 w-4"/>
+                                                                                Good Behaviors
+                                                                            </h5>
+                                                                            <div className="space-y-2">
+                                                                                {element.observed_behaviors.good_behaviors
+                                                                                    .filter((behavior: any) => !showOnlyObserved || behavior.observed)
+                                                                                    .map((behavior: any, index: number) => (
+                                                                                        <div
+                                                                                            key={behavior.behavior_code}
+                                                                                            className={`p-3 rounded-lg border ${
+                                                                                                behavior.observed
+                                                                                                    ? "bg-green-50 border-green-200"
+                                                                                                    : "bg-gray-50 border-gray-200"
+                                                                                            }`}
+                                                                                        >
+                                                                                            <div
+                                                                                                className="flex items-start gap-3">
+                                                                                                <div
+                                                                                                    className="flex items-center gap-2 min-w-0 flex-1">
+                                                                                                    {behavior.observed ? (
+                                                                                                        <CheckCircle2
+                                                                                                            className="h-4 w-4 text-green-600 flex-shrink-0"/>
+                                                                                                    ) : (
+                                                                                                        <CircleX
+                                                                                                            className="h-4 w-4 text-gray-400 flex-shrink-0"/>
+                                                                                                    )}
+                                                                                                    <div
+                                                                                                        className="min-w-0 flex-1">
+                                                                                                        <p
+                                                                                                            className={`text-sm font-medium ${behavior.observed ? "text-green-900" : "text-gray-600"}`}
+                                                                                                        >
+                                                                                                            {behavior.description}
+                                                                                                        </p>
+                                                                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                                                                            Code: {behavior.behavior_code}
+                                                                                                        </p>
+                                                                                                        {behavior.notes && (
+                                                                                                            <p
+                                                                                                                className={`text-xs mt-2 ${behavior.observed ? "text-green-700" : "text-gray-500"}`}
+                                                                                                            >
+                                                                                                                {behavior.notes}
+                                                                                                            </p>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <Badge
+                                                                                                    variant={behavior.observed ? "default" : "secondary"}
+                                                                                                    className="text-xs"
+                                                                                                >
+                                                                                                    {behavior.observed ? "Observed" : "Not Observed"}
+                                                                                                </Badge>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
 
-                                {/* Poor Behaviors */}
-                                {element.observed_behaviors?.poor_behaviors &&
-                                  element.observed_behaviors.poor_behaviors.length > 0 && (
-                                    <div>
-                                      <h5 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-                                        <CircleAlert className="h-4 w-4" />
-                                        Poor Behaviors
-                                      </h5>
-                                      <div className="space-y-2">
-                                        {element.observed_behaviors.poor_behaviors
-                                          .filter((behavior: any) => !showOnlyObserved || behavior.observed)
-                                          .map((behavior: any, index: number) => (
-                                            <div
-                                              key={behavior.behavior_code}
-                                              className={`p-3 rounded-lg border ${
-                                                behavior.observed
-                                                  ? "bg-red-50 border-red-200"
-                                                  : "bg-gray-50 border-gray-200"
-                                              }`}
-                                            >
-                                              <div className="flex items-start gap-3">
-                                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                  {behavior.observed ? (
-                                                    <CircleAlert className="h-4 w-4 text-red-600 flex-shrink-0" />
-                                                  ) : (
-                                                    <CheckCircle2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                                  )}
-                                                  <div className="min-w-0 flex-1">
-                                                    <p
-                                                      className={`text-sm font-medium ${behavior.observed ? "text-red-900" : "text-gray-600"}`}
-                                                    >
-                                                      {behavior.description}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                      Code: {behavior.behavior_code}
-                                                    </p>
-                                                    {behavior.notes && (
-                                                      <p
-                                                        className={`text-xs mt-2 ${behavior.observed ? "text-red-700" : "text-gray-500"}`}
-                                                      >
-                                                        {behavior.notes}
-                                                      </p>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                                <Badge
-                                                  variant={behavior.observed ? "destructive" : "secondary"}
-                                                  className="text-xs"
-                                                >
-                                                  {behavior.observed ? "Observed" : "Not Observed"}
-                                                </Badge>
-                                              </div>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    </div>
-                                  )}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
+                                                                {/* Poor Behaviors */}
+                                                                {element.observed_behaviors?.poor_behaviors &&
+                                                                    element.observed_behaviors.poor_behaviors.length > 0 && (
+                                                                        <div>
+                                                                            <h5 className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
+                                                                                <CircleAlert className="h-4 w-4"/>
+                                                                                Poor Behaviors
+                                                                            </h5>
+                                                                            <div className="space-y-2">
+                                                                                {element.observed_behaviors.poor_behaviors
+                                                                                    .filter((behavior: any) => !showOnlyObserved || behavior.observed)
+                                                                                    .map((behavior: any, index: number) => (
+                                                                                        <div
+                                                                                            key={behavior.behavior_code}
+                                                                                            className={`p-3 rounded-lg border ${
+                                                                                                behavior.observed
+                                                                                                    ? "bg-red-50 border-red-200"
+                                                                                                    : "bg-gray-50 border-gray-200"
+                                                                                            }`}
+                                                                                        >
+                                                                                            <div
+                                                                                                className="flex items-start gap-3">
+                                                                                                <div
+                                                                                                    className="flex items-center gap-2 min-w-0 flex-1">
+                                                                                                    {behavior.observed ? (
+                                                                                                        <CircleAlert
+                                                                                                            className="h-4 w-4 text-red-600 flex-shrink-0"/>
+                                                                                                    ) : (
+                                                                                                        <CheckCircle2
+                                                                                                            className="h-4 w-4 text-gray-400 flex-shrink-0"/>
+                                                                                                    )}
+                                                                                                    <div
+                                                                                                        className="min-w-0 flex-1">
+                                                                                                        <p
+                                                                                                            className={`text-sm font-medium ${behavior.observed ? "text-red-900" : "text-gray-600"}`}
+                                                                                                        >
+                                                                                                            {behavior.description}
+                                                                                                        </p>
+                                                                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                                                                            Code: {behavior.behavior_code}
+                                                                                                        </p>
+                                                                                                        {behavior.notes && (
+                                                                                                            <p
+                                                                                                                className={`text-xs mt-2 ${behavior.observed ? "text-red-700" : "text-gray-500"}`}
+                                                                                                            >
+                                                                                                                {behavior.notes}
+                                                                                                            </p>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <Badge
+                                                                                                    variant={behavior.observed ? "destructive" : "secondary"}
+                                                                                                    className="text-xs"
+                                                                                                >
+                                                                                                    {behavior.observed ? "Observed" : "Not Observed"}
+                                                                                                </Badge>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                            </div>
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center">
+                                <p className="text-muted-foreground">
+                                    {caseDetails.status === "COMPLETED"
+                                        ? "No detailed skills assessment available for this case"
+                                        : "Skills assessment will be available once processing is complete"}
+                                </p>
+                            </div>
+                        )}
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-muted-foreground">
-                  {caseDetails.status === "COMPLETED"
-                    ? "No detailed skills assessment available for this case"
-                    : "Skills assessment will be available once processing is complete"}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
-  )
+                </Card>
+            </TabsContent>
+        </Tabs>
+    )
 }

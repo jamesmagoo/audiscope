@@ -37,7 +37,7 @@ export interface AssessmentData {
   status?: string
   created_at?: string
   updated_at?: string
-  analysis?: string
+  analysis?: any
   error_message?: string
   transcript_block?: string
 }
@@ -57,7 +57,7 @@ export interface AssessmentRecord {
   status: string
   created_at: string
   updated_at: string
-  analysis: string
+  analysis: any
   error_message: string
   transcript_block: string
 }

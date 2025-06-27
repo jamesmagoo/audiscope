@@ -87,10 +87,27 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
     if (!record.analysis || record.status !== "COMPLETED") return { score: null, maxScore: 12 }
 
     try {
-      const analysisObj = JSON.parse(record.analysis)
+      // ✅ Check if analysis is already an object or needs parsing
+      let analysisObj: any;
 
-      // Handle EVeNTs format with overall_assessment
-      if (analysisObj.overall_assessment && analysisObj.overall_assessment.overall_rating) {
+      if (typeof record.analysis === 'string') {
+        // Legacy case: analysis is still stored as string
+        analysisObj = JSON.parse(record.analysis);
+      } else {
+        // New case: analysis is already a parsed object from backend
+        analysisObj = record.analysis;
+      }
+
+      // Handle EVeNTs format with nested assessment structure
+      if (analysisObj.assessment?.overall_assessment?.overall_rating) {
+        return {
+          score: analysisObj.assessment.overall_assessment.overall_rating,
+          maxScore: 4, // EVeNTs uses 1-4 scale
+        }
+      }
+
+      // Handle EVeNTs format with direct overall_assessment
+      if (analysisObj.overall_assessment?.overall_rating) {
         return {
           score: analysisObj.overall_assessment.overall_rating,
           maxScore: 4, // EVeNTs uses 1-4 scale
@@ -107,6 +124,8 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
 
       return { score: null, maxScore: 12 }
     } catch (e) {
+      console.error("Error calculating score from analysis:", e)
+      console.error("Record analysis type:", typeof record.analysis)
       return { score: null, maxScore: 12 }
     }
   }
