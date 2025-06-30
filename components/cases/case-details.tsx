@@ -59,12 +59,13 @@ const parseAssessmentResults = (record: AssessmentRecord) => {
         }
 
         // Parse transcript from transcript_block if available
-        let transcript: any[] = []
+        let transcript: string = ''
         if (record.transcript_block) {
             try {
                 // Handle transcript_block which might still be a string
                 if (typeof record.transcript_block === 'string') {
-                    transcript = JSON.parse(record.transcript_block)
+                    // transcript = JSON.parse(record.transcript_block)
+                    transcript = record.transcript_block
                 } else {
                     transcript = record.transcript_block
                 }
@@ -444,28 +445,31 @@ export function CaseDetails({id}: CaseDetailsProps) {
                         <CardDescription>Recorded dialogue from the assessment session</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {transcript && transcript.length > 0 ? (
-                            <div className="space-y-4 max-h-96 overflow-y-auto">
-                                {transcript.map((entry: any, index: number) => (
-                                    <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">
-                                        <div
-                                            className="w-16 flex-shrink-0 text-sm text-muted-foreground font-mono">{entry.time}</div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-sm">{entry.speaker}</p>
-                                            <p className="text-sm mt-1">{entry.text}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-8 text-center">
-                                <p className="text-muted-foreground">
-                                    {caseDetails.status === "COMPLETED"
-                                        ? "No transcript available for this assessment"
-                                        : "Transcript will be available once processing is complete"}
-                                </p>
-                            </div>
-                        )}
+                        <div>
+                            {transcript}
+                        </div>
+                        {/*{transcript && transcript.length > 0 ? (*/}
+                        {/*    <div className="space-y-4 max-h-96 overflow-y-auto">*/}
+                        {/*        {transcript.map((entry: any, index: number) => (*/}
+                        {/*            <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">*/}
+                        {/*                <div*/}
+                        {/*                    className="w-16 flex-shrink-0 text-sm text-muted-foreground font-mono">{entry.time}</div>*/}
+                        {/*                <div className="flex-1">*/}
+                        {/*                    <p className="font-medium text-sm">{entry.speaker}</p>*/}
+                        {/*                    <p className="text-sm mt-1">{entry.text}</p>*/}
+                        {/*                </div>*/}
+                        {/*            </div>*/}
+                        {/*        ))}*/}
+                        {/*    </div>*/}
+                        {/*) : (*/}
+                        {/*    <div className="py-8 text-center">*/}
+                        {/*        <p className="text-muted-foreground">*/}
+                        {/*            {caseDetails.status === "COMPLETED"*/}
+                        {/*                ? "No transcript available for this assessment"*/}
+                        {/*                : "Transcript will be available once processing is complete"}*/}
+                        {/*        </p>*/}
+                        {/*    </div>*/}
+                        {/*)}*/}
                     </CardContent>
                 </Card>
             </TabsContent>
