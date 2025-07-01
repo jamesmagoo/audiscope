@@ -469,7 +469,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                     const getSpeakerColor = (speaker: string) => {
                                         const colors = [
                                             'bg-blue-100 border-blue-300',
-                                            'bg-green-100 border-green-300', 
+                                            'bg-green-100 border-green-300',
                                             'bg-purple-100 border-purple-300',
                                             'bg-orange-100 border-orange-300',
                                             'bg-pink-100 border-pink-300',
@@ -496,19 +496,23 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                     return (
                                         <div key={segment.id || index} className="flex gap-3 items-start">
                                             {/* Speaker Avatar */}
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
+                                            <div
+                                                className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
                                                 {getSpeakerInitials(segment.speaker_label)}
                                             </div>
-                                            
+
                                             {/* Speech Bubble */}
                                             <div className="flex-1 max-w-[80%]">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xs font-medium text-gray-600">{segment.speaker_label}</span>
+                                                    <span
+                                                        className="text-xs font-medium text-gray-600">{segment.speaker_label}</span>
                                                     {segment.start_time && (
-                                                        <span className="text-xs text-gray-400 font-mono">{formatTime(segment.start_time)}</span>
+                                                        <span
+                                                            className="text-xs text-gray-400 font-mono">{formatTime(segment.start_time)}</span>
                                                     )}
                                                 </div>
-                                                <div className={`p-3 rounded-xl border-2 ${getSpeakerColor(segment.speaker_label)}`}>
+                                                <div
+                                                    className={`p-3 rounded-xl border-2 ${getSpeakerColor(segment.speaker_label)}`}>
                                                     <p className="text-sm leading-relaxed text-gray-800">
                                                         {segment.transcript || 'No transcript available'}
                                                     </p>
@@ -518,10 +522,23 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                     )
                                 })}
                             </div>
+                        ) : transcript ? (
+                            <div className="p-6">
+                                <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span>Raw transcript (audio segments not available)</span>
+                                </div>
+                                <div className="max-h-[calc(100vh-250px)] overflow-y-auto bg-muted/30 rounded-lg p-4">
+                                    <pre className="text-sm leading-relaxed whitespace-pre-wrap text-gray-800 font-sans">
+                                        {transcript}
+                                    </pre>
+                                </div>
+                            </div>
                         ) : (
                             <div className="py-12 text-center">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                                    <MessageSquare className="w-8 h-8 text-gray-400" />
+                                <div
+                                    className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <MessageSquare className="w-8 h-8 text-gray-400"/>
                                 </div>
                                 <p className="text-gray-500 font-medium">
                                     {caseDetails.status === "COMPLETED"
@@ -530,7 +547,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                 </p>
                                 {caseDetails.status === "TRANSCRIBING" && (
                                     <p className="text-sm text-gray-400 mt-2">
-                                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                                        <Loader2 className="w-4 h-4 animate-spin inline mr-2"/>
                                         Processing audio and generating transcript...
                                     </p>
                                 )}
