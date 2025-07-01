@@ -20,14 +20,14 @@ export function AppSidebar() {
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Cases", href: "/dashboard/cases", icon: FileText },
     { name: "Upload Assessment", href: "/dashboard/upload", icon: Upload },
-    { name: "Analytics", href: "/dashboard/analytics", icon: Activity },
-    { name: "Team", href: "/dashboard/team", icon: Users },
+    // { name: "Analytics", href: "/dashboard/analytics", icon: Activity },
+    // { name: "Team", href: "/dashboard/team", icon: Users },
   ]
 
   return (
     <Sidebar>
       <SidebarHeader className="flex items-center justify-center py-4">
-        <Link href="/dashboard" className="flex items-center space-x-2">
+        <Link href="/" className="flex items-center space-x-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
             <span className="text-lg font-bold text-primary-foreground">A</span>
           </div>

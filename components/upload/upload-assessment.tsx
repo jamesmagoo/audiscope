@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { FileAudio, Check, AlertCircle } from "lucide-react"
 import apiClient, { type FileUploadResponse, type AssessmentData } from "@/lib/aws-api.service"
+import { useToast } from "@/hooks/use-toast"
 
 // Define the validation schema with Zod
 const formSchema = z.object({
@@ -39,8 +40,9 @@ export function UploadAssessment() {
   const [isAudioUploaded, setIsAudioUploaded] = useState<boolean>(false)
   const [fileId, setFileId] = useState<string | null>(null)
   const [stagingKey, setStagingKey] = useState<string | null>(null)
-  const [apiError, setApiError] = useState<string | null>(null)
-  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false)
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+  const { toast } = useToast()
 
   // Initialize the form with useForm hook and zodResolver
   const form = useForm<FormValues>({
@@ -55,17 +57,16 @@ export function UploadAssessment() {
     },
   })
 
-  const handleAudioUploadComplete = (res: FileUploadResponse): void => {
+  const handleAudioUploadComplete = (res: FileUploadResponse, fileName: string): void => {
     setIsAudioUploaded(true)
     setFileId(res.fileId)
     setStagingKey(res.key)
+    setUploadedFileName(fileName)
     form.setValue("isAudioUploaded", true)
   }
 
   const onSubmit = async (data: FormValues): Promise<void> => {
     setIsSubmitting(true)
-    setApiError(null)
-    setSubmitSuccess(false)
 
     try {
       console.log("Form submitted:", data)
@@ -88,25 +89,34 @@ export function UploadAssessment() {
 
       console.log("API response:", response)
 
-      // Update success state
-      setSubmitSuccess(true)
+      // Show success toast
+      toast({
+        variant: "success",
+        title: "Assessment Submitted Successfully!",
+        description: "Your assessment has been submitted and is now being processed.",
+      })
 
-      // Reset form after a short delay to allow user to see success message
-      setTimeout(() => {
-        form.reset()
-        setIsAudioUploaded(false)
-        setFileId(null)
-        setStagingKey(null)
-        setSubmitSuccess(false)
-      }, 3000)
+      // Mark as successfully submitted
+      setIsSubmitted(true)
     } catch (error) {
       console.error("Error submitting form:", error)
-      setApiError(
-        error instanceof Error ? error.message : "An error occurred while submitting the assessment. Please try again.",
-      )
+      toast({
+        variant: "destructive", 
+        title: "Submission Failed",
+        description: error instanceof Error ? error.message : "An error occurred while submitting the assessment. Please try again.",
+      })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleReset = () => {
+    form.reset()
+    setIsAudioUploaded(false)
+    setFileId(null)
+    setStagingKey(null)
+    setIsSubmitted(false)
+    setUploadedFileName(null)
   }
 
   // AudioUpload component
@@ -175,7 +185,7 @@ export function UploadAssessment() {
 
         setProgress(100)
         setSuccess(true)
-        handleAudioUploadComplete(presignedData)
+        handleAudioUploadComplete(presignedData, file.name)
       } catch (error) {
         setError(error instanceof Error ? error.message : "Failed to upload file. Please try again.")
         console.error("Upload error:", error)
@@ -194,31 +204,34 @@ export function UploadAssessment() {
             <div className="mt-1">
               <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center">
                 <FileAudio className="h-10 w-10 text-muted-foreground mb-2" />
+                {!isAudioUploaded && (
                 <div className="space-y-1 text-center">
                   <p className="text-sm text-muted-foreground">Upload an audio recording of the surgical procedure</p>
                   <div className="flex justify-center text-sm">
-                    <label
-                      htmlFor="file-upload"
-                      className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none"
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      disabled={uploading || (success && isAudioUploaded)}
                     >
-                      <span>Upload a file</span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept="audio/*"
-                        onChange={handleFileChange}
-                        ref={fileInputRef}
-                        disabled={uploading || success}
-                      />
-                    </label>
+                      Upload a file
+                    </button>
+                    <input
+                      id="file-upload"
+                      name="file-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="audio/*"
+                      onChange={handleFileChange}
+                      ref={fileInputRef}
+                      disabled={uploading || (success && isAudioUploaded)}
+                    />
                     <p className="pl-1 text-muted-foreground">or drag and drop</p>
                   </div>
                   <p className="text-xs text-muted-foreground">MP3, WAV, M4A up to 500MB</p>
-                </div>
+                </div>)}
 
-                {file && !success && (
+                {file && !success && !isAudioUploaded && (
                   <div className="mt-4 w-full">
                     <div className="flex items-center justify-between text-sm">
                       <span className="truncate max-w-[200px]">{file.name}</span>
@@ -245,10 +258,38 @@ export function UploadAssessment() {
                   </div>
                 )}
 
-                {success && (
-                  <div className="mt-4 flex items-center text-green-500">
-                    <Check className="h-5 w-5 mr-2" />
-                    <span>File uploaded successfully</span>
+                {(success || isAudioUploaded) && (
+                  <div className="mt-4 w-full">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg w-full">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center text-green-700 flex-1 min-w-0">
+                          <Check className="h-5 w-5 mr-3 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">File uploaded successfully</p>
+                            <p className="text-sm text-green-600 truncate">{file?.name || uploadedFileName || "Audio file"}</p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setFile(null)
+                            setSuccess(false)
+                            setIsAudioUploaded(false)
+                            setFileId(null)
+                            setStagingKey(null)
+                            setUploadedFileName(null)
+                            form.setValue("isAudioUploaded", false)
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = ""
+                            }
+                          }}
+                          className="ml-3 text-xs text-muted-foreground hover:text-green-700 transition-colors underline-offset-4 hover:underline"
+                        >
+                          Replace
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -368,28 +409,26 @@ export function UploadAssessment() {
               />
             </div>
 
-            {/* Success/Error Messages */}
-            {submitSuccess && (
-              <Alert className="bg-green-50 border-green-200">
-                <Check className="h-4 w-4 text-green-500" />
-                <AlertTitle>Success</AlertTitle>
-                <AlertDescription>Your assessment has been submitted successfully.</AlertDescription>
-              </Alert>
-            )}
-
-            {apiError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{apiError}</AlertDescription>
-              </Alert>
-            )}
           </CardContent>
 
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Submit Assessment"}
-            </Button>
+          <CardFooter className="flex gap-4">
+            {isSubmitted ? (
+              <>
+                <div className="flex-1 p-3 bg-green-50 border border-green-200 w-full rounded-lg">
+                  <div className="flex items-center text-green-700">
+                    <Check className="h-5 w-5 mr-2" />
+                    <span className="font-medium">Assessment submitted successfully!</span>
+                  </div>
+                </div>
+                <Button type="button" variant="outline" onClick={handleReset}>
+                  Submit Another
+                </Button>
+              </>
+            ) : (
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Submit Assessment"}
+              </Button>
+            )}
           </CardFooter>
         </form>
       </Form>
