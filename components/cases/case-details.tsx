@@ -18,7 +18,7 @@ import {
     Target,
     TrendingUp,
 } from "lucide-react"
-import apiClient, {type AssessmentRecord} from "@/lib/aws-api.service"
+import apiClient, {type AssessmentRecord, AudioSegment} from "@/lib/aws-api.service"
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert"
 import {Button} from "@/components/ui/button"
 import Link from "next/link"
@@ -33,12 +33,22 @@ const parseAssessmentResults = (record: AssessmentRecord) => {
         rating_definitions: null as any,
         categories: null as any,
         transcript: [] as any[],
+        audio_segments: [] as AudioSegment[],
         score: null as number | null,
         maxScore: 12,
     }
 
+    // Parse audio segments first (outside try-catch to avoid scope issues)
+    let audio_segments: AudioSegment[] = []
+    if (record.audio_segments) {
+        audio_segments = record.audio_segments;
+    }
+
     if (!record.analysis || record.status !== "COMPLETED") {
-        return defaultResult
+        return {
+            ...defaultResult,
+            audio_segments: audio_segments
+        }
     }
 
     // Add this at the start of parseAssessmentResults for debugging
@@ -82,17 +92,24 @@ const parseAssessmentResults = (record: AssessmentRecord) => {
                 rating_definitions: analysisObj.assessment.rating_definitions || null,
                 categories: analysisObj.assessment.categories || null,
                 transcript: transcript,
+                audio_segments: audio_segments,
                 score: null,
                 maxScore: 12,
             }
         }
 
-        return defaultResult
+        return {
+            ...defaultResult,
+            audio_segments: audio_segments
+        }
     } catch (e) {
         console.error("Error parsing analysis:", e)
         console.error("Record analysis type:", typeof record.analysis)
         console.error("Record analysis value:", record.analysis)
-        return defaultResult
+        return {
+            ...defaultResult,
+            audio_segments: audio_segments
+        }
     }
 }
 
@@ -203,7 +220,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
     }
 
     // Parse the assessment results
-    const {overall_assessment, rating_definitions, categories, transcript, score, maxScore} =
+    const {overall_assessment, rating_definitions, categories, transcript, audio_segments, score, maxScore} =
         parseAssessmentResults(caseDetails)
 
     return (
@@ -444,32 +461,81 @@ export function CaseDetails({id}: CaseDetailsProps) {
                         <CardTitle>Session Transcript</CardTitle>
                         <CardDescription>Recorded dialogue from the assessment session</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div>
-                            {transcript}
-                        </div>
-                        {/*{transcript && transcript.length > 0 ? (*/}
-                        {/*    <div className="space-y-4 max-h-96 overflow-y-auto">*/}
-                        {/*        {transcript.map((entry: any, index: number) => (*/}
-                        {/*            <div key={index} className="flex gap-4 p-3 rounded-lg bg-muted/50">*/}
-                        {/*                <div*/}
-                        {/*                    className="w-16 flex-shrink-0 text-sm text-muted-foreground font-mono">{entry.time}</div>*/}
-                        {/*                <div className="flex-1">*/}
-                        {/*                    <p className="font-medium text-sm">{entry.speaker}</p>*/}
-                        {/*                    <p className="text-sm mt-1">{entry.text}</p>*/}
-                        {/*                </div>*/}
-                        {/*            </div>*/}
-                        {/*        ))}*/}
-                        {/*    </div>*/}
-                        {/*) : (*/}
-                        {/*    <div className="py-8 text-center">*/}
-                        {/*        <p className="text-muted-foreground">*/}
-                        {/*            {caseDetails.status === "COMPLETED"*/}
-                        {/*                ? "No transcript available for this assessment"*/}
-                        {/*                : "Transcript will be available once processing is complete"}*/}
-                        {/*        </p>*/}
-                        {/*    </div>*/}
-                        {/*)}*/}
+                    <CardContent className="p-0">
+                        {audio_segments && audio_segments.length > 0 ? (
+                            <div className="space-y-4 max-h-screen overflow-y-auto p-6">
+                                {audio_segments.map((segment: AudioSegment, index: number) => {
+                                    // Get speaker color based on speaker label
+                                    const getSpeakerColor = (speaker: string) => {
+                                        const colors = [
+                                            'bg-blue-100 border-blue-300',
+                                            'bg-green-100 border-green-300', 
+                                            'bg-purple-100 border-purple-300',
+                                            'bg-orange-100 border-orange-300',
+                                            'bg-pink-100 border-pink-300',
+                                            'bg-cyan-100 border-cyan-300'
+                                        ]
+                                        // Generate consistent color based on speaker label
+                                        const hash = speaker.split('').reduce((a, b) => {
+                                            a = ((a << 5) - a) + b.charCodeAt(0)
+                                            return a & a
+                                        }, 0)
+                                        return colors[Math.abs(hash) % colors.length]
+                                    }
+
+                                    const getSpeakerInitials = (speaker: string) => {
+                                        return speaker.split(' ').map(word => word.charAt(0)).join('').toUpperCase()
+                                    }
+
+                                    const formatTime = (timeStr?: string) => {
+                                        if (!timeStr) return ''
+                                        // Assume format is HH:MM:SS or MM:SS
+                                        return timeStr.replace(/^0+:/, '').replace(/^0/, '')
+                                    }
+
+                                    return (
+                                        <div key={segment.id || index} className="flex gap-3 items-start">
+                                            {/* Speaker Avatar */}
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
+                                                {getSpeakerInitials(segment.speaker_label)}
+                                            </div>
+                                            
+                                            {/* Speech Bubble */}
+                                            <div className="flex-1 max-w-[80%]">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xs font-medium text-gray-600">{segment.speaker_label}</span>
+                                                    {segment.start_time && (
+                                                        <span className="text-xs text-gray-400 font-mono">{formatTime(segment.start_time)}</span>
+                                                    )}
+                                                </div>
+                                                <div className={`p-3 rounded-xl border-2 ${getSpeakerColor(segment.speaker_label)}`}>
+                                                    <p className="text-sm leading-relaxed text-gray-800">
+                                                        {segment.transcript || 'No transcript available'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center">
+                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <MessageSquare className="w-8 h-8 text-gray-400" />
+                                </div>
+                                <p className="text-gray-500 font-medium">
+                                    {caseDetails.status === "COMPLETED"
+                                        ? "No transcript available for this assessment"
+                                        : "Transcript will be available once processing is complete"}
+                                </p>
+                                {caseDetails.status === "TRANSCRIBING" && (
+                                    <p className="text-sm text-gray-400 mt-2">
+                                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                                        Processing audio and generating transcript...
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>

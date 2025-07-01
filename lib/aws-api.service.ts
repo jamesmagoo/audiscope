@@ -60,6 +60,15 @@ export interface AssessmentRecord {
   analysis: any
   error_message: string
   transcript_block: string
+  audio_segments : AudioSegment[]
+}
+
+export interface AudioSegment {
+  transcript? : string
+  id: number
+  speaker_label: string
+  start_time?: string
+  end_time?: string
 }
 
 // Response interface for list endpoints
