@@ -33,25 +33,6 @@ export default function Dashboard() {
   const pendingAssessments = assessments.filter((a) => a.status !== "COMPLETED").length
   const completedAssessments = assessments.filter((a) => a.status === "COMPLETED")
 
-  // Calculate average score
-  const scoresArray = completedAssessments
-    .map((a) => {
-      try {
-        if (a.analysis) {
-          const analysis = JSON.parse(a.analysis)
-          return analysis.score || 0
-        }
-        return 0
-      } catch {
-        return 0
-      }
-    })
-    .filter((score) => score > 0)
-
-  const averageScore =
-    scoresArray.length > 0
-      ? (scoresArray.reduce((sum, score) => sum + score, 0) / scoresArray.length).toFixed(1)
-      : "0.0"
 
   // Get recent assessments (last 3)
   const recentAssessments = [...assessments]
@@ -89,45 +70,35 @@ export default function Dashboard() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Assessments</CardTitle>
+            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : totalAssessments}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
+          <CardContent className="pt-0">
+            <div className="text-3xl font-bold text-foreground">{loading ? "..." : totalAssessments}</div>
+            <p className="text-sm text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Analysis</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Analysis</CardTitle>
+            <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : pendingAssessments}</div>
-            <p className="text-xs text-muted-foreground">In progress</p>
+          <CardContent className="pt-0">
+            <div className="text-3xl font-bold text-foreground">{loading ? "..." : pendingAssessments}</div>
+            <p className="text-sm text-muted-foreground mt-1">In progress</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+            <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : completedAssessments.length}</div>
-            <p className="text-xs text-muted-foreground">Finished assessments</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? "..." : `${averageScore}/12`}</div>
-            <p className="text-xs text-muted-foreground">Completed assessments</p>
+          <CardContent className="pt-0">
+            <div className="text-3xl font-bold text-foreground">{loading ? "..." : completedAssessments.length}</div>
+            <p className="text-sm text-muted-foreground mt-1">Finished assessments</p>
           </CardContent>
         </Card>
       </div>
