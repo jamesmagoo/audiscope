@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Activity, Users, Mic, BarChart3 } from "lucide-react"
+import { ArrowRight, Activity, Users, Mic, BarChart3, Upload, Brain, FileText, TrendingUp } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function LandingPage() {
@@ -55,6 +55,111 @@ export default function LandingPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works Section */}
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-foreground mb-4">How It Works</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Transform your clinical training in 4 simple steps. From audio capture to actionable insights.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Step 1 */}
+            <div className="text-center relative">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/10 mb-6 relative">
+                <Upload className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  1
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">Upload Audio</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Simply upload your procedure recording. Our platform accepts any audio format from OR sessions.
+              </p>
+              {/* Arrow positioned absolutely */}
+              <div className="hidden md:block absolute -right-4 top-10">
+                <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="text-center relative">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10 mb-6 relative">
+                <Brain className="w-10 h-10 text-green-600 dark:text-green-400" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  2
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">AI Analysis</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Advanced AI processes speech patterns, identifies speakers, and analyzes team dynamics in real-time.
+              </p>
+              {/* Arrow positioned absolutely */}
+              <div className="hidden md:block absolute -right-4 top-10">
+                <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="text-center relative">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-purple-500/10 mb-6 relative">
+                <FileText className="w-10 h-10 text-purple-600 dark:text-purple-400" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  3
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">EVeNTS Assessment</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Comprehensive evaluation across 15 non-technical skills including leadership, communication, and decision-making.
+              </p>
+              {/* Arrow positioned absolutely */}
+              <div className="hidden md:block absolute -right-4 top-10">
+                <ArrowRight className="w-6 h-6 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="text-center relative">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-500/10 mb-6 relative">
+                <TrendingUp className="w-10 h-10 text-orange-600 dark:text-orange-400" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  4
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">Actionable Insights</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Receive detailed reports with strengths, improvement areas, and personalized action plans for each team member.
+              </p>
+            </div>
+          </div>
+
+          {/* Value Proposition */}
+          <div className="mt-16 text-center bg-primary/5 rounded-2xl p-8">
+            <h3 className="text-2xl font-bold text-foreground mb-4">
+              From Hours to Minutes
+            </h3>
+            <p className="text-lg text-muted-foreground mb-6 max-w-3xl mx-auto">
+              What traditionally takes expert reviewers hours to assess manually, AudiScope delivers in minutes with 
+              consistent, objective, and comprehensive evaluation that scales across your entire training program.
+            </p>
+            <div className="flex justify-center gap-8 text-sm">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">95%</div>
+                <div className="text-muted-foreground">Time Saved</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">100%</div>
+                <div className="text-muted-foreground">Consistent</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">24/7</div>
+                <div className="text-muted-foreground">Available</div>
+              </div>
             </div>
           </div>
         </div>

@@ -224,75 +224,43 @@ export function CaseDetails({id}: CaseDetailsProps) {
         parseAssessmentResults(caseDetails)
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="transcript">Transcript</TabsTrigger>
-                <TabsTrigger value="skills">Skills Breakdown</TabsTrigger>
-            </TabsList>
+        <div className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <TabsList>
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                        <TabsTrigger value="skills">Skills Breakdown</TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Assessment Information inline with tabs */}
+                    <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                            <span>Lead:</span>
+                            <span className="font-medium">{caseDetails.lead_surgeon}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span>Team:</span>
+                            <span className="font-medium">{caseDetails.team_member_count}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span>Assessor:</span>
+                            <span className="font-medium">{caseDetails.assessor_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span>Date:</span>
+                            <span className="font-medium">{new Date(caseDetails.assessment_date).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
 
             <TabsContent value="overview" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Assessment Information</CardTitle>
-                            <CardDescription>Key details about this assessment</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Case ID</p>
-                                    <p className="font-mono text-sm">{caseDetails.id}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                                    <Badge
-                                        variant={getStatusVariant(caseDetails.status)}>{getStatusDisplay(caseDetails.status)}</Badge>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Lead Surgeon</p>
-                                    <p>{caseDetails.lead_surgeon}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Team Size</p>
-                                    <p>{caseDetails.team_member_count} members</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Assessor</p>
-                                    <p>{caseDetails.assessor_name}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Assessment Date</p>
-                                    <p>{new Date(caseDetails.assessment_date).toLocaleDateString()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Created</p>
-                                    <p>{new Date(caseDetails.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                                    <p>{new Date(caseDetails.updated_at).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                            {caseDetails.notes && (
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Notes</p>
-                                    <p className="text-sm mt-1">{caseDetails.notes}</p>
-                                </div>
-                            )}
-                            <Button className="w-full mt-4" asChild>
-                                <Link href={`/dashboard/cases/${caseDetails.id}`}>View Details</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Assessment Score</CardTitle>
-                            <CardDescription>Overall performance evaluation</CardDescription>
-                        </CardHeader>
-                        {/* Assessment Score */}
-                        <CardContent className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Assessment Score</CardTitle>
+                        <CardDescription>Overall performance evaluation</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
                             {overall_assessment ? (
                                 <>
                                     {/* EVeNTs Format - Overall Rating */}
@@ -319,7 +287,38 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                             )}
                                         </div>
                                     </div>
-                                    {/* Rest of EVeNTs format display... */}
+
+                                    {/* Category Breakdown - moved to top */}
+                                    {categories && (
+                                        <div className="space-y-3">
+                                            <h4 className="text-sm font-semibold">Category Breakdown</h4>
+                                            <div className="grid gap-3">
+                                                {Object.entries(categories).map(([categoryKey, category]: [string, any]) => (
+                                                    <div key={categoryKey} className="p-3 bg-muted/30 rounded-lg">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <span className="text-sm font-medium">{formatCategoryName(categoryKey)}</span>
+                                                            <div
+                                                                className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${getRatingDisplay(category.category_rating).bgColor}`}
+                                                            >
+                                                                <span className={`text-xs font-bold ${getRatingDisplay(category.category_rating).color}`}>
+                                                                    {category.category_rating || "N/A"}
+                                                                </span>
+                                                            </div>
+                                                            <Badge variant="outline" className={`text-xs ${getRatingDisplay(category.category_rating).color}`}>
+                                                                {getRatingDisplay(category.category_rating).label}
+                                                            </Badge>
+                                                        </div>
+                                                        {category.category_feedback_notes && (
+                                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                                {category.category_feedback_notes}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Overall Feedback */}
                                     {overall_assessment.overall_feedback && (
                                         <div className="space-y-2">
@@ -386,6 +385,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                             )}
                                         </div>
                                     )}
+
                                 </>
                             ) : score !== null ? (
                                 <>
@@ -419,9 +419,8 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                     </div>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </div>
+                    </CardContent>
+                </Card>
 
                 {/* Action Plan */}
                 {overall_assessment?.action_plan && overall_assessment.action_plan.length > 0 && (
@@ -788,6 +787,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
                     </CardContent>
                 </Card>
             </TabsContent>
-        </Tabs>
+            </Tabs>
+        </div>
     )
 }
