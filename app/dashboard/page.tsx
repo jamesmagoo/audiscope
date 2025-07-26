@@ -71,36 +71,42 @@ export default function Dashboard() {
       />
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Assessments</CardTitle>
-            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-3xl font-bold text-foreground">{loading ? "..." : totalAssessments}</div>
-            <p className="text-sm text-muted-foreground mt-1">All time</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Analysis</CardTitle>
-            <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-3xl font-bold text-foreground">{loading ? "..." : pendingAssessments}</div>
-            <p className="text-sm text-muted-foreground mt-1">In progress</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
-            <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-3xl font-bold text-foreground">{loading ? "..." : completedAssessments.length}</div>
-            <p className="text-sm text-muted-foreground mt-1">Finished assessments</p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/cases">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Assessments</CardTitle>
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-3xl font-bold text-foreground">{loading ? "..." : totalAssessments}</div>
+              <p className="text-sm text-muted-foreground mt-1">All time</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/cases?status=pending">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Analysis</CardTitle>
+              <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-3xl font-bold text-foreground">{loading ? "..." : pendingAssessments}</div>
+              <p className="text-sm text-muted-foreground mt-1">In progress</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/cases?status=completed">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
+              <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-3xl font-bold text-foreground">{loading ? "..." : completedAssessments.length}</div>
+              <p className="text-sm text-muted-foreground mt-1">Finished assessments</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
