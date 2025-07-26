@@ -35,7 +35,7 @@ const parseAssessmentResults = (record: AssessmentRecord) => {
         transcript: [] as any[],
         audio_segments: [] as AudioSegment[],
         score: null as number | null,
-        maxScore: 12,
+        maxScore: 16,
     }
 
     // Parse audio segments first (outside try-catch to avoid scope issues)
@@ -94,7 +94,7 @@ const parseAssessmentResults = (record: AssessmentRecord) => {
                 transcript: transcript,
                 audio_segments: audio_segments,
                 score: null,
-                maxScore: 12,
+                maxScore: 16,
             }
         }
 
@@ -141,7 +141,24 @@ const getStatusVariant = (status: string): "default" | "secondary" | "destructiv
     }
 }
 
-// Function to get rating color and label
+// Function to get rating color and label - 16-point scale
+const getRatingDisplayOverall = (rating: number | null) => {
+    if (rating === null) return {color: "text-muted-foreground", label: "N/A", bgColor: "bg-muted"}
+
+    switch (true) {
+        case rating >= 13:
+            return {color: "text-green-600", label: "Excellent", bgColor: "bg-green-100"}
+        case rating >= 10:
+            return {color: "text-blue-600", label: "Good", bgColor: "bg-blue-100"}
+        case rating >= 7:
+            return {color: "text-amber-600", label: "Acceptable", bgColor: "bg-amber-100"}
+        case rating >= 4:
+            return {color: "text-orange-600", label: "Marginal", bgColor: "bg-orange-100"}
+        default:
+            return {color: "text-red-600", label: "Poor", bgColor: "bg-red-100"}
+    }
+}
+
 const getRatingDisplay = (rating: number | null) => {
     if (rating === null) return {color: "text-muted-foreground", label: "N/A", bgColor: "bg-muted"}
 
@@ -234,7 +251,7 @@ export function CaseDetails({id}: CaseDetailsProps) {
                     </TabsList>
                     
                     {/* Assessment Information inline with tabs */}
-                    <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                    <div className="hidden lg:flex items-center gap-6 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                             <span>Lead:</span>
                             <span className="font-medium">{caseDetails.lead_surgeon}</span>
@@ -254,6 +271,32 @@ export function CaseDetails({id}: CaseDetailsProps) {
                     </div>
                 </div>
 
+                {/* Mobile Assessment Information */}
+                <div className="lg:hidden">
+                    <Card>
+                        <CardContent className="pt-4">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Lead Surgeon:</span>
+                                    <p className="font-medium">{caseDetails.lead_surgeon}</p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Team Size:</span>
+                                    <p className="font-medium">{caseDetails.team_member_count}</p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Assessor:</span>
+                                    <p className="font-medium">{caseDetails.assessor_name}</p>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Date:</span>
+                                    <p className="font-medium">{new Date(caseDetails.assessment_date).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
             <TabsContent value="overview" className="space-y-4">
                 <Card>
                     <CardHeader>
@@ -270,15 +313,15 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                                 className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${getRatingDisplay(overall_assessment.overall_rating).bgColor} mb-3`}
                                             >
                         <span
-                            className={`text-3xl font-bold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
+                            className={`text-3xl font-bold ${getRatingDisplayOverall(overall_assessment.overall_rating).color}`}
                         >
                           {overall_assessment.overall_rating || "N/A"}
                         </span>
                                             </div>
                                             <div
-                                                className={`text-lg font-semibold ${getRatingDisplay(overall_assessment.overall_rating).color}`}
+                                                className={`text-lg font-semibold ${getRatingDisplayOverall(overall_assessment.overall_rating).color}`}
                                             >
-                                                {getRatingDisplay(overall_assessment.overall_rating).label}
+                                                {getRatingDisplayOverall(overall_assessment.overall_rating).label}
                                             </div>
                                             {rating_definitions && overall_assessment.overall_rating && (
                                                 <p className="text-xs text-muted-foreground mt-2 max-w-xs">

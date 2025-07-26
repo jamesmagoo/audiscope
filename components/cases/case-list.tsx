@@ -18,7 +18,7 @@ interface CaseListProps {
 }
 
 export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: CaseListProps) {
-  const [viewType, setViewType] = useState<"table" | "cards">("table")
+  const [viewType, setViewType] = useState<"table" | "cards">("cards")
   const [cases, setCases] = useState<AssessmentRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +84,7 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
 
   // Function to calculate score from analysis (if available) - handles both formats
   const getScoreFromAnalysis = (record: AssessmentRecord): { score: number | null; maxScore: number } => {
-    if (!record.analysis || record.status !== "COMPLETED") return { score: null, maxScore: 12 }
+    if (!record.analysis || record.status !== "COMPLETED") return { score: null, maxScore: 16 }
 
     try {
       // ✅ Check if analysis is already an object or needs parsing
@@ -102,7 +102,7 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
       if (analysisObj.assessment?.overall_assessment?.overall_rating) {
         return {
           score: analysisObj.assessment.overall_assessment.overall_rating,
-          maxScore: 4, // EVeNTs uses 1-4 scale
+          maxScore: 16,
         }
       }
 
@@ -110,7 +110,7 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
       if (analysisObj.overall_assessment?.overall_rating) {
         return {
           score: analysisObj.overall_assessment.overall_rating,
-          maxScore: 4, // EVeNTs uses 1-4 scale
+          maxScore: 16,
         }
       }
 
@@ -118,15 +118,15 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
       if (analysisObj.score !== undefined) {
         return {
           score: analysisObj.score,
-          maxScore: analysisObj.maxScore || 12,
+          maxScore: analysisObj.maxScore || 16,
         }
       }
 
-      return { score: null, maxScore: 12 }
+      return { score: null, maxScore: 16 }
     } catch (e) {
       console.error("Error calculating score from analysis:", e)
       console.error("Record analysis type:", typeof record.analysis)
-      return { score: null, maxScore: 12 }
+      return { score: null, maxScore: 16 }
     }
   }
 
