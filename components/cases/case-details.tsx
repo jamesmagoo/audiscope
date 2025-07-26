@@ -251,23 +251,31 @@ export function CaseDetails({id}: CaseDetailsProps) {
                     </TabsList>
                     
                     {/* Assessment Information inline with tabs */}
-                    <div className="hidden lg:flex items-center gap-6 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                            <span>Lead:</span>
-                            <span className="font-medium">{caseDetails.lead_surgeon}</span>
+                    <div className="hidden lg:block space-y-2">
+                        <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                                <span>Lead:</span>
+                                <span className="font-medium">{caseDetails.lead_surgeon}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span>Team:</span>
+                                <span className="font-medium">{caseDetails.team_member_count}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span>Assessor:</span>
+                                <span className="font-medium">{caseDetails.assessor_name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <span>Date:</span>
+                                <span className="font-medium">{new Date(caseDetails.assessment_date).toLocaleDateString()}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                            <span>Team:</span>
-                            <span className="font-medium">{caseDetails.team_member_count}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span>Assessor:</span>
-                            <span className="font-medium">{caseDetails.assessor_name}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span>Date:</span>
-                            <span className="font-medium">{new Date(caseDetails.assessment_date).toLocaleDateString()}</span>
-                        </div>
+                        {caseDetails.notes && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <span>Notes:</span>
+                                <span className="font-medium">{caseDetails.notes}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -292,6 +300,12 @@ export function CaseDetails({id}: CaseDetailsProps) {
                                     <span className="text-muted-foreground">Date:</span>
                                     <p className="font-medium">{new Date(caseDetails.assessment_date).toLocaleDateString()}</p>
                                 </div>
+                                {caseDetails.notes && (
+                                    <div className="col-span-2">
+                                        <span className="text-muted-foreground">Notes:</span>
+                                        <p className="font-medium">{caseDetails.notes}</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
