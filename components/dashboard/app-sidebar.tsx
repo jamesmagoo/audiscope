@@ -13,12 +13,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOutUser } = useAuth()
+  const { setOpenMobile, isMobile } = useSidebar()
 
   const getInitials = (email: string) => {
     if (!email) return 'U'
@@ -40,6 +42,12 @@ export function AppSidebar() {
       router.push('/')
     } catch (error) {
       console.error('Sign out error:', error)
+    }
+  }
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false)
     }
   }
 
@@ -69,7 +77,7 @@ export function AppSidebar() {
                 asChild
                 isActive={item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)}
               >
-                <Link href={item.href}>
+                <Link href={item.href} onClick={handleNavClick}>
                   <item.icon className="h-5 w-5" />
                   <span>{item.name}</span>
                 </Link>
