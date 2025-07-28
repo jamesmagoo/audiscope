@@ -25,6 +25,7 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 
 **Backend Integration:**
 - AWS API Gateway backend (`lib/aws-api.service.ts`)
+- AWS Amplify Authentication (`components/auth-provider.tsx`)
 - S3 for audio file storage with presigned URLs
 - Environment variable: `NEXT_PUBLIC_API_GATEWAY_URL`
 
@@ -38,14 +39,21 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 ### Directory Structure
 
 - `app/` - Next.js App Router pages with nested routing
-  - `dashboard/` - Main application dashboard with sidebar layout
+  - `dashboard/` - Main application dashboard with sidebar layout (protected by AuthGuard)
   - `dashboard/cases/[id]/` - Dynamic case detail pages
   - `dashboard/upload/` - Assessment upload functionality
+  - `login/` - User authentication login page
+  - `signup/` - User registration and email confirmation
+  - `forgot-password/` - Password reset functionality
+  - `reset-password/` - Password reset confirmation
 - `components/` - Reusable React components organized by feature
   - `ui/` - shadcn/ui component library
   - `cases/` - Case management components
   - `upload/` - File upload components
+  - `auth-provider.tsx` - AWS Amplify authentication context provider
+  - `auth-guard.tsx` - Route protection component for authenticated pages
 - `lib/aws-api.service.ts` - AWS backend API client with TypeScript interfaces
+- `lib/auth-config.ts` - AWS Amplify authentication configuration
 - `hooks/` - Custom React hooks
 
 ### Key Files
@@ -194,3 +202,91 @@ const result = await submitAssessment({
   audio_file_id: uploadResponse.fileId
 })
 ```
+
+## Authentication System
+
+AudiScope uses AWS Amplify Authentication for secure user management with email-based signup/signin.
+
+### Authentication Architecture
+
+**Components:**
+- `components/auth-provider.tsx` - React Context provider for authentication state
+- `components/auth-guard.tsx` - Route protection wrapper component  
+- `lib/auth-config.ts` - AWS Amplify configuration
+- `app/layout.tsx` - Root layout wrapped with AuthProvider
+- `app/dashboard/layout.tsx` - Dashboard layout wrapped with AuthGuard
+
+**Authentication Flow:**
+1. User visits protected route (dashboard)
+2. AuthGuard checks authentication status via AuthProvider
+3. Unauthenticated users redirected to `/login`
+4. After successful login, users can access protected routes
+
+### Authentication Pages
+
+**Login Page (`app/login/page.tsx`):**
+- Email/password authentication
+- Form validation with error handling
+- Success message display from URL params (post-signup confirmation)
+- AudiScope branding
+
+**Signup Page (`app/signup/page.tsx`):**
+- Two-step process: registration → email confirmation
+- Password strength validation
+- Email confirmation with 6-digit code
+- Auto-redirect to login after successful confirmation
+- Resend confirmation code functionality
+
+**Password Reset:**
+- `app/forgot-password/page.tsx` - Password reset initiation
+- `app/reset-password/page.tsx` - Password reset confirmation
+
+### AuthProvider Functions
+
+```typescript
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  error: string | null
+  signInUser: (username: string, password: string) => Promise<void>
+  signUpUser: (username: string, password: string, email: string) => Promise<void>
+  signOutUser: () => Promise<void>
+  confirmSignUpUser: (username: string, code: string) => Promise<void>
+  resendConfirmationCode: (username: string) => Promise<void>
+  forgotPassword: (username: string) => Promise<void>
+  confirmForgotPassword: (username: string, code: string, newPassword: string) => Promise<void>
+}
+```
+
+### User Interface Integration
+
+**Landing Page (`app/page.tsx`):**
+- Conditional navigation: "Sign In" for unauthenticated, "Dashboard" for authenticated users
+- Dynamic CTA buttons based on auth state
+
+**Dashboard Sidebar (`components/dashboard/app-sidebar.tsx`):**
+- Real user email and username display
+- Smart initial generation from email
+- Text truncation for long usernames/emails
+- Styled logout button with hover effects
+- Professional user avatar with gradient background
+
+### Route Protection
+
+```typescript
+// Dashboard protection example
+<AuthGuard>
+  <SidebarProvider>
+    <AppSidebar />
+    <SidebarInset>{children}</SidebarInset>
+  </SidebarProvider>
+</AuthGuard>
+```
+
+### Development Notes
+
+- Authentication state persists across browser sessions
+- Loading states handled during auth operations
+- Error handling with user-friendly messages
+- Automatic redirects maintain smooth user experience
+- All authentication pages use consistent AudiScope branding

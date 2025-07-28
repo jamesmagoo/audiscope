@@ -1,9 +1,14 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Activity, Users, Mic, BarChart3, Upload, Brain, FileText, TrendingUp } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useAuth } from "@/components/auth-provider"
 
 export default function LandingPage() {
+  const { user } = useAuth()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Navigation */}
@@ -17,9 +22,15 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="outline" asChild>
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
+            {user ? (
+              <Button variant="outline" asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+            )}
           </div>
         </div>
       </nav>
@@ -36,8 +47,8 @@ export default function LandingPage() {
 
             {/* Main Heading */}
             <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Revolutionizing
-              <span className="text-primary block">Clinical Skills Assessment</span>
+              Elevate Clinical Excellence
+              <span className="text-primary block">Through Intelligent Assessment</span>
             </h1>
 
             {/* Description */}
@@ -49,12 +60,26 @@ export default function LandingPage() {
 
             {/* CTA Button */}
             <div className="flex justify-center">
-              <Button size="lg" className="px-8 py-4 text-lg" asChild>
-                <Link href="/dashboard" className="flex items-center">
-                  Access Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
+              {user ? (
+                <Button size="lg" className="px-8 py-4 text-lg" asChild>
+                  <Link href="/dashboard" className="flex items-center">
+                    Access Dashboard
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              ) : (
+                <div className="flex gap-4">
+                  <Button size="lg" className="px-8 py-4 text-lg" asChild>
+                    <Link href="/signup" className="flex items-center">
+                      Get Started
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="px-8 py-4 text-lg" asChild>
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
