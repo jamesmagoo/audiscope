@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/auth-provider'
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 
-export default function LoginPage() {
+// Component to handle search params (needs Suspense)
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -63,24 +64,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className="w-full max-w-md p-6">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-                <span className="text-2xl font-bold text-primary-foreground">A</span>
-              </div>
-              <span className="text-3xl font-bold text-foreground">AudiScope</span>
+    <div className="w-full max-w-md p-6">
+      <div className="text-center mb-8">
+        <Link href="/" className="inline-block">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+              <span className="text-2xl font-bold text-primary-foreground">A</span>
             </div>
-          </Link>
-          <h1 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back
-          </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Sign in to your AudiScope account
-          </p>
-        </div>
+            <span className="text-3xl font-bold text-foreground">AudiScope</span>
+          </div>
+        </Link>
+        <h1 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+          Welcome back
+        </h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Sign in to your AudiScope account
+        </p>
+      </div>
 
         <Card>
           <CardHeader>
@@ -184,7 +184,22 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <Suspense fallback={
+        <div className="w-full max-w-md p-6">
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
+      }>
+        <LoginForm />
+      </Suspense>
     </div>
   )
 }
