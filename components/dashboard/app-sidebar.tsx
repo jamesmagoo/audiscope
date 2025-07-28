@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Activity, FileText, Home, Upload, Users, LogOut } from "lucide-react"
+import { Activity, FileText, Home, Upload, Users, LogOut, BarChart3, BookOpen, Package } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,8 +55,11 @@ export function AppSidebar() {
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Cases", href: "/dashboard/cases", icon: FileText },
     { name: "Upload Assessment", href: "/dashboard/upload", icon: Upload },
-    // { name: "Analytics", href: "/dashboard/analytics", icon: Activity },
-    // { name: "Team", href: "/dashboard/team", icon: Users },
+    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
+    { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true },
+    { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true },
+    { name: "Device Library", href: "/dashboard/devices", icon: Package, disabled: true },
+    { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true },
   ]
 
   return (
@@ -74,13 +77,21 @@ export function AppSidebar() {
           {navItems.map((item) => (
             <SidebarMenuItem key={item.name}>
               <SidebarMenuButton
-                asChild
-                isActive={item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)}
+                asChild={!item.disabled}
+                isActive={!item.disabled && (item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href))}
+                className={item.disabled ? "opacity-50 cursor-not-allowed hover:bg-transparent" : ""}
               >
-                <Link href={item.href} onClick={handleNavClick}>
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </Link>
+                {item.disabled ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </div>
+                ) : (
+                  <Link href={item.href} onClick={handleNavClick}>
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
