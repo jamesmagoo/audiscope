@@ -339,7 +339,7 @@ export function UploadAssessment() {
               name="team_member_count"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="team_member_count">Number of Team Members</Label>
+                  <Label htmlFor="team_member_count">Number of Speakers</Label>
                   <FormControl>
                     <Input
                       id="team_member_count"
