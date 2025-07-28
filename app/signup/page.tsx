@@ -93,7 +93,7 @@ export default function SignupPage() {
 
     try {
       await confirmSignUpUser(email, confirmationCode)
-      router.push('/login?message=Account confirmed successfully. Please sign in.')
+      router.push('/login?message=Confirmation successful. Please sign in.')
     } catch (error: any) {
       setErrors({ general: error.message || 'Failed to confirm account' })
     }
