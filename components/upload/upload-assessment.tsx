@@ -157,7 +157,7 @@ export function UploadAssessment() {
 
       try {
         setUploading(true)
-        setProgress(10)
+        setProgress(0)
         setError(null)
 
         // Get presigned URL from API
@@ -168,22 +168,49 @@ export function UploadAssessment() {
         }
 
         const presignedData = await apiClient.getUploadUrl(uploadRequest)
-        setProgress(30)
 
-        // Upload file to S3 using the presigned URL
-        const uploadResponse = await fetch(presignedData.uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: {
-            "Content-Type": file.type,
-          },
+        // Upload file to S3 using XMLHttpRequest for progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+
+          // Track upload progress
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 100)
+              setProgress(percentComplete)
+            }
+          })
+
+          // Handle successful upload
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setProgress(100)
+              resolve()
+            } else {
+              reject(new Error(`Upload failed with status: ${xhr.status}`))
+            }
+          })
+
+          // Handle network errors
+          xhr.addEventListener('error', () => {
+            reject(new Error('Network error during upload'))
+          })
+
+          // Handle timeouts
+          xhr.addEventListener('timeout', () => {
+            reject(new Error('Upload timed out'))
+          })
+
+          // Configure request
+          xhr.open('PUT', presignedData.uploadUrl)
+          xhr.setRequestHeader('Content-Type', file.type)
+          xhr.timeout = 300000 // 5 minutes timeout for large files
+
+          // Start upload
+          xhr.send(file)
         })
 
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload file to storage")
-        }
-
-        setProgress(100)
+        // Only set success after upload completes successfully
         setSuccess(true)
         handleAudioUploadComplete(presignedData, file.name)
       } catch (error) {
