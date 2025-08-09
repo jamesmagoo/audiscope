@@ -17,6 +17,7 @@ import {
   type ConfirmResetPasswordInput
 } from 'aws-amplify/auth'
 import { configureAmplify } from '@/lib/auth-config'
+import { getAuthHeaders, getCurrentUserId } from '@/lib/api-utils'
 
 interface User {
   username: string
@@ -35,6 +36,8 @@ interface AuthContextType {
   resendConfirmationCode: (username: string) => Promise<void>
   forgotPassword: (username: string) => Promise<void>
   confirmForgotPassword: (username: string, code: string, newPassword: string) => Promise<void>
+  getAuthHeaders: () => Promise<Record<string, string>>
+  getUserId: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -205,6 +208,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
+  // Wrapper to maintain the existing interface (returns null on error instead of throwing)
+  const getUserId = async (): Promise<string | null> => {
+    try {
+      return await getCurrentUserId()
+    } catch (error) {
+      console.error('Failed to get user ID:', error)
+      return null
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -216,6 +229,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     resendConfirmationCode,
     forgotPassword,
     confirmForgotPassword,
+    getAuthHeaders,
+    getUserId,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

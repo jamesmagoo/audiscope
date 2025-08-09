@@ -2,6 +2,8 @@
  * API client for interacting with our AWS backend services
  */
 
+import { makeAuthenticatedRequest, getCurrentUserId, handleApiResponse } from './api-utils'
+
 // Replace with your actual API endpoint after deployment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
@@ -77,10 +79,6 @@ export interface AssessmentListResponse {
   count: number
 }
 
-function getUserID(): string {
-  // In a real app, this would come from authentication
-  return "abcdef123456"
-}
 
 /**
  * Generate a presigned URL for uploading a file to S3
@@ -93,32 +91,20 @@ export async function getUploadUrl(fileDetails: FileUploadRequest): Promise<File
   try {
     console.log("Requesting presigned URL for:", fileDetails.filename)
 
+    const uid = await getCurrentUserId()
     const fullRequest = {
       ...fileDetails,
-      uid: getUserID(),
+      uid,
     }
 
-    const response = await fetch(`${API_BASE_URL}/uploads`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/uploads`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(fullRequest),
     })
 
     console.log("API response status:", response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      try {
-        const errorData = JSON.parse(errorText)
-        throw new Error(errorData.error || `API Error: ${response.status}`)
-      } catch (jsonError) {
-        throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 100)}`)
-      }
-    }
-
-    const data = await response.json()
+    const data = await handleApiResponse(response)
+    
     console.log("Received presigned URL successfully")
     return data
   } catch (error) {
@@ -135,30 +121,18 @@ export async function submitAssessment(
   }
 
   try {
+    const uid = await getCurrentUserId()
     const request = {
       ...assessmentData,
-      uid: getUserID(),
+      uid,
     }
 
-    const response = await fetch(`${API_BASE_URL}/assessments`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/assessments`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(request),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      try {
-        const errorData = JSON.parse(errorText)
-        throw new Error(errorData.error || `API Error: ${response.status}`)
-      } catch (jsonError) {
-        throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 100)}`)
-      }
-    }
-
-    const data = await response.json()
+    const data = await handleApiResponse(response)
     return {
       success: true,
       id: data.id || data.assessmentId || "",
@@ -178,43 +152,23 @@ export async function getRecords(status?: string): Promise<AssessmentListRespons
     throw new Error("API endpoint not configured")
   }
 
-  const url = new URL(`${API_BASE_URL}/records`)
-  if (status && status !== "all") {
-    url.searchParams.append("status", status)
+  try {
+    const uid = await getCurrentUserId()
+    const url = new URL(`${API_BASE_URL}/records`)
+    
+    if (status && status !== "all") {
+      url.searchParams.append("status", status)
+    }
+    url.searchParams.append("uid", uid)
+
+    const response = await makeAuthenticatedRequest(url.toString())
+    return await handleApiResponse(response)
+  } catch (error) {
+    console.error("Error getting records:", error)
+    throw error
   }
-
-  const response = await fetch(url.toString())
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.error || "Failed to get records")
-  }
-
-  return response.json()
 }
 
-/**
- * Get all assessments for the current user from /assessments endpoint
- */
-export async function getAssessments(status?: string): Promise<AssessmentListResponse> {
-  if (!API_BASE_URL) {
-    throw new Error("API endpoint not configured")
-  }
-
-  const url = new URL(`${API_BASE_URL}/assessments`)
-  if (status && status !== "all") {
-    url.searchParams.append("status", status)
-  }
-
-  const response = await fetch(url.toString())
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.error || "Failed to get assessments")
-  }
-
-  return response.json()
-}
 
 /**
  * Get a specific assessment by ID
@@ -224,14 +178,13 @@ export async function getAssessmentById(id: string): Promise<AssessmentRecord> {
     throw new Error("API endpoint not configured")
   }
 
-  const response = await fetch(`${API_BASE_URL}/assessments/${id}`)
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.error || "Failed to get assessment")
+  try {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/assessments/${id}`)
+    return await handleApiResponse(response)
+  } catch (error) {
+    console.error("Error getting assessment:", error)
+    throw error
   }
-
-  return response.json()
 }
 
 /**
@@ -242,18 +195,17 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
     throw new Error("API endpoint not configured")
   }
 
-  // TODO -- need to add uid to the request here as it's needed for queries
-  // TODO : we will need an uth provider for AWS Cognito users - signup - login - etc.
-  const url = new URL(`${API_BASE_URL}/records/${id}`)
+  try {
+    const uid = await getCurrentUserId()
+    const url = new URL(`${API_BASE_URL}/records/${id}`)
+    url.searchParams.append("uid", uid)
 
-  const response = await fetch(url.toString())
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.error || "Failed to get record")
+    const response = await makeAuthenticatedRequest(url.toString())
+    return await handleApiResponse(response)
+  } catch (error) {
+    console.error("Error getting record:", error)
+    throw error
   }
-
-  return response.json()
 }
 
 /**
@@ -263,7 +215,6 @@ const apiClient = {
   submitAssessment,
   getUploadUrl,
   getRecords,
-  getAssessments,
   getAssessmentById,
   getRecordById,
 }

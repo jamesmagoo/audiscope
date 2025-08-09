@@ -69,13 +69,13 @@ export default function LandingPage() {
                 </Button>
               ) : (
                 <div className="flex gap-4">
+                  {/*<Button size="lg" className="px-8 py-4 text-lg" asChild>*/}
+                  {/*  <Link href="/signup" className="flex items-center">*/}
+                  {/*    Get Started*/}
+                  {/*    <ArrowRight className="ml-2 h-5 w-5" />*/}
+                  {/*  </Link>*/}
+                  {/*</Button>*/}
                   <Button size="lg" className="px-8 py-4 text-lg" asChild>
-                    <Link href="/signup" className="flex items-center">
-                      Get Started
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" className="px-8 py-4 text-lg" asChild>
                     <Link href="/login">Sign In</Link>
                   </Button>
                 </div>
