@@ -200,7 +200,7 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
   }
 }
 
-const apiClient = {
+export default {
   getUploadUrl,
   submitAssessment,
   getRecords,
@@ -208,5 +208,10 @@ const apiClient = {
   getRecordById,
 }
 
-export { apiClient }
-export default apiClient
+export const apiClient = {
+  getUploadUrl,
+  submitAssessment,
+  getRecords,
+  getAssessmentById,
+  getRecordById,
+}
