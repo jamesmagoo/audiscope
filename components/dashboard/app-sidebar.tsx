@@ -2,8 +2,18 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Activity, FileText, Home, Upload, Users, LogOut, BarChart3, BookOpen, Package } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
+import {
+  FileText,
+  Home,
+  Upload,
+  Users,
+  LogOut,
+  BarChart3,
+  BookOpen,
+  Package,
+  MessageSquareText
+} from "lucide-react"
+import { useAuth } from "@/components/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
@@ -55,6 +65,7 @@ export function AppSidebar() {
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Cases", href: "/dashboard/cases", icon: FileText },
     { name: "Upload Assessment", href: "/dashboard/upload", icon: Upload },
+    { name: "Assistant", href: "/dashboard/assistant", icon: MessageSquareText},
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true },
     { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true },

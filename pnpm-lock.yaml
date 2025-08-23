@@ -33,7 +33,7 @@ dependencies:
     specifier: latest
     version: 1.1.14(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
   '@radix-ui/react-dropdown-menu':
-    specifier: latest
+    specifier: ^2.1.15
     version: 2.1.15(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
   '@radix-ui/react-hover-card':
     specifier: 1.1.4
@@ -63,13 +63,13 @@ dependencies:
     specifier: latest
     version: 2.2.5(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
   '@radix-ui/react-separator':
-    specifier: latest
+    specifier: ^1.1.7
     version: 1.1.7(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
   '@radix-ui/react-slider':
     specifier: 1.2.2
     version: 1.2.2(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
   '@radix-ui/react-slot':
-    specifier: latest
+    specifier: ^1.2.3
     version: 1.2.3(@types/react@19.1.8)(react@19.1.0)
   '@radix-ui/react-switch':
     specifier: 1.1.2
@@ -89,6 +89,12 @@ dependencies:
   '@radix-ui/react-tooltip':
     specifier: latest
     version: 1.2.7(@types/react-dom@19.1.6)(@types/react@19.1.8)(react-dom@19.1.0)(react@19.1.0)
+  '@tanstack/react-query':
+    specifier: ^5.85.5
+    version: 5.85.5(react@19.1.0)
+  '@tanstack/react-query-devtools':
+    specifier: ^5.85.5
+    version: 5.85.5(@tanstack/react-query@5.85.5)(react@19.1.0)
   autoprefixer:
     specifier: ^10.4.20
     version: 10.4.21(postcss@8.5.4)
@@ -3471,6 +3477,34 @@ packages:
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
     dependencies:
       tslib: 2.8.1
+    dev: false
+
+  /@tanstack/query-core@5.85.5:
+    resolution: {integrity: sha512-KO0WTob4JEApv69iYp1eGvfMSUkgw//IpMnq+//cORBzXf0smyRwPLrUvEe5qtAEGjwZTXrjxg+oJNP/C00t6w==}
+    dev: false
+
+  /@tanstack/query-devtools@5.84.0:
+    resolution: {integrity: sha512-fbF3n+z1rqhvd9EoGp5knHkv3p5B2Zml1yNRjh7sNXklngYI5RVIWUrUjZ1RIcEoscarUb0+bOvIs5x9dwzOXQ==}
+    dev: false
+
+  /@tanstack/react-query-devtools@5.85.5(@tanstack/react-query@5.85.5)(react@19.1.0):
+    resolution: {integrity: sha512-6Ol6Q+LxrCZlQR4NoI5181r+ptTwnlPG2t7H9Sp3klxTBhYGunONqcgBn2YKRPsaKiYM8pItpKMdMXMEINntMQ==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.85.5
+      react: ^18 || ^19
+    dependencies:
+      '@tanstack/query-devtools': 5.84.0
+      '@tanstack/react-query': 5.85.5(react@19.1.0)
+      react: 19.1.0
+    dev: false
+
+  /@tanstack/react-query@5.85.5(react@19.1.0):
+    resolution: {integrity: sha512-/X4EFNcnPiSs8wM2v+b6DqS5mmGeuJQvxBglmDxl6ZQb5V26ouD2SJYAcC3VjbNwqhY2zjxVD15rDA5nGbMn3A==}
+    peerDependencies:
+      react: ^18 || ^19
+    dependencies:
+      '@tanstack/query-core': 5.85.5
+      react: 19.1.0
     dev: false
 
   /@types/aws-lambda@8.10.152:

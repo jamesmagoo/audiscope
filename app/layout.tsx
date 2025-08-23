@@ -2,9 +2,11 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/components/auth-provider"
+import { ThemeProvider } from "@/components/providers/theme-provider"
+import { AuthProvider } from "@/components/providers/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
+import QueryProvider from "@/components/providers/query-provider";
+import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,12 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+      <QueryProvider>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
           <AuthProvider>
             {children}
             <Toaster />
           </AuthProvider>
         </ThemeProvider>
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+      </QueryProvider>
       </body>
     </html>
   )

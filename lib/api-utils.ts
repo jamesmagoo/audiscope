@@ -11,6 +11,7 @@ export interface ApiError extends Error {
 
 /**
  * Get authentication headers with JWT token
+ * Only returns authorization headers - caller should set content-type as needed
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
@@ -22,8 +23,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     }
 
     return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${token}`
     }
   } catch (error) {
     console.error('Failed to get auth headers:', error)
@@ -67,10 +67,14 @@ export async function makeAuthenticatedRequest(
         throw new Error('No access token available')
       }
 
-      const headers = {
+      const headers: Record<string, string> = {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
+        ...options.headers as Record<string, string>,
+      }
+
+      // Only set content-type for JSON bodies if not already specified
+      if (typeof options.body === 'string' && !headers['Content-Type'] && !headers['content-type']) {
+        headers['Content-Type'] = 'application/json'
       }
 
       const response = await fetch(url, {

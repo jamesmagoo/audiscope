@@ -21,7 +21,6 @@ import {
 import apiClient, {type AssessmentRecord, AudioSegment} from "@/lib/aws-api.service"
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert"
 import {Button} from "@/components/ui/button"
-import Link from "next/link"
 
 interface CaseDetailsProps {
     id: string
