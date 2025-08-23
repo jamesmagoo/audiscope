@@ -68,7 +68,7 @@ export function KnowledgeBase({ documents, onFileUpload, onDeleteDocument }: Kno
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-4 py-2">
+        <div className="px-2 py-2">
           <div className="mb-3">
             <p className="text-xs text-muted-foreground">
               {documents.length} document{documents.length !== 1 ? "s" : ""} in knowledge base
