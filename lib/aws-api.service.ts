@@ -217,4 +217,4 @@ const apiClient = {
   getRecordById,
 }
 
-export { apiClient as default }
+export default apiClient

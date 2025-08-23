@@ -27,12 +27,12 @@ export function ChatSidebar({
   return (
     <div className="w-80 border-r border-border bg-card">
       <Tabs defaultValue="conversations" className="h-full flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 mx-4 mt-4 mb-2">
+        <TabsList className="grid w-full grid-cols-2 m-4 mb-2">
           <TabsTrigger value="conversations">Chats</TabsTrigger>
           <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="conversations" className="flex-1 mt-0">
+        <TabsContent value="conversations" className="flex-1 mt-0 px-4">
           <ConversationList
             conversations={conversations}
             activeConversationId={activeConversationId}
@@ -41,7 +41,7 @@ export function ChatSidebar({
           />
         </TabsContent>
 
-        <TabsContent value="knowledge" className="flex-1 mt-0">
+        <TabsContent value="knowledge" className="flex-1 mt-0 px-4">
           <KnowledgeBase documents={documents} onFileUpload={onFileUpload} onDeleteDocument={onDeleteDocument} />
         </TabsContent>
       </Tabs>
