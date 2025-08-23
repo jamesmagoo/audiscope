@@ -80,21 +80,21 @@ export function KnowledgeBase({ documents, onFileUpload, onDeleteDocument }: Kno
               key={document.id}
               className="p-3 rounded-lg border border-border mb-2 hover:bg-accent/50 transition-colors"
             >
-              <div className="flex items-start gap-3">
-                <FileTextIcon className="h-4 w-4 mt-1 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
+              <div className="flex items-start gap-3 w-full">
+                <FileTextIcon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-sm truncate">{document.name}</p>
-                    <div className="flex items-center gap-1">
+                    <p className="font-medium text-sm truncate flex-1">{document.name}</p>
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                      <span className="text-xs text-muted-foreground">Synced</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Synced</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {formatFileSize(document.size)} • {document.uploadDate.toLocaleDateString()}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-shrink-0">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
                     <DownloadIcon className="h-3 w-3" />
                   </Button>
