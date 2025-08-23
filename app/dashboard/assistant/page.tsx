@@ -202,13 +202,13 @@ export default function AssistantPage() {
       {/* Sidebar - Conversations and Knowledge Base */}
       <div className="w-80 border-r border-border bg-card">
         <Tabs defaultValue="conversations" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 m-2">
+          <TabsList className="grid w-full grid-cols-2 mx-4 mt-4 mb-2">
             <TabsTrigger value="conversations">Chats</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
           </TabsList>
 
           <TabsContent value="conversations" className="flex-1 mt-0">
-            <div className="p-4 border-b border-border">
+            <div className="px-4 pb-4 border-b border-border">
               <Button
                 onClick={createNewConversation}
                 className="w-full justify-start gap-2 bg-transparent"
@@ -220,7 +220,7 @@ export default function AssistantPage() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="p-2">
+              <div className="px-4 py-2">
                 {conversations.map((conversation) => (
                   <button
                     key={conversation.id}
@@ -245,7 +245,7 @@ export default function AssistantPage() {
           </TabsContent>
 
           <TabsContent value="knowledge" className="flex-1 mt-0">
-            <div className="p-4 border-b border-border space-y-3">
+            <div className="px-4 pb-4 border-b border-border space-y-3">
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full justify-start gap-2"
@@ -276,8 +276,8 @@ export default function AssistantPage() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="p-2">
-                <div className="mb-3 px-2">
+              <div className="px-4 py-2">
+                <div className="mb-3">
                   <p className="text-xs text-muted-foreground">
                     {documents.length} document{documents.length !== 1 ? "s" : ""} in knowledge base
                   </p>
@@ -291,8 +291,14 @@ export default function AssistantPage() {
                     <div className="flex items-start gap-3">
                       <FileTextIcon className="h-4 w-4 mt-1 text-muted-foreground" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{document.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm truncate">{document.name}</p>
+                          <div className="flex items-center gap-1">
+                            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                            <span className="text-xs text-muted-foreground">Synced</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
                           {formatFileSize(document.size)} • {document.uploadDate.toLocaleDateString()}
                         </p>
                       </div>
@@ -338,7 +344,7 @@ export default function AssistantPage() {
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-border bg-card">
-              <h1 className="font-semibold text-lg">{activeConversation.title}</h1>
+              <h1 className="font-semibold text-lg">Product Assistant</h1>
               <p className="text-sm text-muted-foreground">
                 AI Medical Assistant • {documents.length} documents available
               </p>
