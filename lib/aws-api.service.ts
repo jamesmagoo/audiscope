@@ -14,6 +14,14 @@ export interface FileUploadResponse {
   key: string
 }
 
+export interface AudioSegment {
+  id?: string
+  speaker_label: string
+  start_time?: string
+  end_time?: string
+  transcript?: string
+}
+
 export interface AssessmentData {
   id?: string
   uid?: string
@@ -50,6 +58,7 @@ export interface AssessmentRecord {
   analysis: any
   error_message: string
   transcript_block: string
+  audio_segments?: AudioSegment[]
 }
 
 export interface AssessmentListResponse {
@@ -200,7 +209,7 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
   }
 }
 
-export default {
+const apiClient = {
   getUploadUrl,
   submitAssessment,
   getRecords,
@@ -208,10 +217,4 @@ export default {
   getRecordById,
 }
 
-export const apiClient = {
-  getUploadUrl,
-  submitAssessment,
-  getRecords,
-  getAssessmentById,
-  getRecordById,
-}
+export default apiClient
