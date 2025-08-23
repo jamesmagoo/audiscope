@@ -88,14 +88,14 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
 
     try {
       // ✅ Check if analysis is already an object or needs parsing
-      let analysisObj: any;
+      let analysisObj: any
 
-      if (typeof record.analysis === 'string') {
+      if (typeof record.analysis === "string") {
         // Legacy case: analysis is still stored as string
-        analysisObj = JSON.parse(record.analysis);
+        analysisObj = JSON.parse(record.analysis)
       } else {
         // New case: analysis is already a parsed object from backend
-        analysisObj = record.analysis;
+        analysisObj = record.analysis
       }
 
       // Handle EVeNTs format with nested assessment structure

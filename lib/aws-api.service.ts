@@ -2,7 +2,7 @@
  * API client for interacting with our AWS backend services
  */
 
-import { makeAuthenticatedRequest, getCurrentUserId, handleApiResponse } from './api-utils'
+import { makeAuthenticatedRequest, getCurrentUserId, handleApiResponse } from "./api-utils"
 
 // Replace with your actual API endpoint after deployment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
@@ -62,11 +62,11 @@ export interface AssessmentRecord {
   analysis: any
   error_message: string
   transcript_block: string
-  audio_segments : AudioSegment[]
+  audio_segments: AudioSegment[]
 }
 
 export interface AudioSegment {
-  transcript? : string
+  transcript?: string
   id: number
   speaker_label: string
   start_time?: string
@@ -79,11 +79,10 @@ export interface AssessmentListResponse {
   count: number
 }
 
-
 /**
  * Generate a presigned URL for uploading a file to S3
  */
-export async function getUploadUrl(fileDetails: FileUploadRequest): Promise<FileUploadResponse> {
+async function getUploadUrl(fileDetails: FileUploadRequest): Promise<FileUploadResponse> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
@@ -104,7 +103,7 @@ export async function getUploadUrl(fileDetails: FileUploadRequest): Promise<File
 
     console.log("API response status:", response.status)
     const data = await handleApiResponse(response)
-    
+
     console.log("Received presigned URL successfully")
     return data
   } catch (error) {
@@ -113,7 +112,7 @@ export async function getUploadUrl(fileDetails: FileUploadRequest): Promise<File
   }
 }
 
-export async function submitAssessment(
+async function submitAssessment(
   assessmentData: AssessmentData,
 ): Promise<{ success: boolean; id: string; message?: string }> {
   if (!API_BASE_URL) {
@@ -147,7 +146,7 @@ export async function submitAssessment(
 /**
  * Get all assessment records from /records endpoint, optionally filtered by status
  */
-export async function getRecords(status?: string): Promise<AssessmentListResponse> {
+async function getRecords(status?: string): Promise<AssessmentListResponse> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
@@ -155,7 +154,7 @@ export async function getRecords(status?: string): Promise<AssessmentListRespons
   try {
     const uid = await getCurrentUserId()
     const url = new URL(`${API_BASE_URL}/records`)
-    
+
     if (status && status !== "all") {
       url.searchParams.append("status", status)
     }
@@ -169,11 +168,10 @@ export async function getRecords(status?: string): Promise<AssessmentListRespons
   }
 }
 
-
 /**
  * Get a specific assessment by ID
  */
-export async function getAssessmentById(id: string): Promise<AssessmentRecord> {
+async function getAssessmentById(id: string): Promise<AssessmentRecord> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
@@ -190,7 +188,7 @@ export async function getAssessmentById(id: string): Promise<AssessmentRecord> {
 /**
  * Get a specific record by ID from /records endpoint
  */
-export async function getRecordById(id: string): Promise<AssessmentRecord> {
+async function getRecordById(id: string): Promise<AssessmentRecord> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
@@ -218,5 +216,7 @@ const apiClient = {
   getAssessmentById,
   getRecordById,
 }
+
+export { getUploadUrl, submitAssessment, getRecords, getAssessmentById, getRecordById }
 
 export default apiClient

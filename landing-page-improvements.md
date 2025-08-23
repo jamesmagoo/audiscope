@@ -19,10 +19,10 @@ The landing page currently includes:
 - **"Schedule Demo" footer CTA** for bottom-of-page conversions
 
 #### 2. Social Proof & Testimonials
-```
+\`\`\`
 "AudiScope transformed our resident training program. We've seen 40% improvement in non-technical skills assessment consistency."
 - Dr. Sarah Johnson, Director of Medical Education, Johns Hopkins Hospital
-```
+\`\`\`
 - Medical professional testimonials
 - Institution quotes with photos/credentials
 - Success story cards with before/after metrics
@@ -60,7 +60,7 @@ The landing page currently includes:
 - **Multi-specialty applications**: Cross-departmental training
 
 #### 8. Problem/Solution Positioning
-```html
+\`\`\`html
 <section>
   <h2>The Challenge</h2>
   <ul>
@@ -73,7 +73,7 @@ The landing page currently includes:
   <h2>The Solution</h2>
   <p>AudiScope automates EVeNTS assessment with AI precision...</p>
 </section>
-```
+\`\`\`
 
 ### 🟢 Low Priority (Enhancement & Polish)
 

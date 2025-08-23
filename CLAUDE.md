@@ -83,9 +83,9 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 
 Create a `.env.local` file in the root directory with:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_API_GATEWAY_URL=your-aws-api-gateway-url
-```
+\`\`\`
 
 ### AWS Configuration
 
@@ -155,34 +155,34 @@ All API calls now include JWT authorization tokens in the `Authorization: Bearer
 #### Key Functions
 
 **File Upload**
-```typescript
+\`\`\`typescript
 getUploadUrl(fileDetails: FileUploadRequest): Promise<FileUploadResponse>
-```
+\`\`\`
 - Generates presigned S3 URLs for audio file uploads
 - **Authentication**: Requires valid JWT token
 - **User Context**: Automatically includes authenticated user's ID
 - Returns: `{ uploadUrl, fileId, key }`
 
 **Assessment Management**
-```typescript
+\`\`\`typescript
 submitAssessment(assessmentData: AssessmentData): Promise<{ success: boolean; id: string }>
 getAssessments(status?: string): Promise<AssessmentListResponse>
 getAssessmentById(id: string): Promise<AssessmentRecord>
-```
+\`\`\`
 - **Authentication**: All functions require valid JWT token
 - **User Context**: Automatically scoped to authenticated user
 
 **Record Management**
-```typescript
+\`\`\`typescript
 getRecords(status?: string): Promise<AssessmentListResponse>
 getRecordById(id: string): Promise<AssessmentRecord>
-```
+\`\`\`
 - **Authentication**: Requires valid JWT token
 - **User Context**: Includes authenticated user's ID in query parameters
 
 #### Core Types
 
-```typescript
+\`\`\`typescript
 // Assessment submission data
 interface AssessmentData {
   lead_surgeon: string
@@ -202,7 +202,7 @@ interface AssessmentRecord {
   transcript_block: string
   // ... plus all AssessmentData fields
 }
-```
+\`\`\`
 
 ### API Authentication Utilities (`lib/api-utils.ts`)
 
@@ -210,7 +210,7 @@ interface AssessmentRecord {
 
 #### Key Functions
 
-```typescript
+\`\`\`typescript
 // Get authenticated headers with JWT token
 getAuthHeaders(): Promise<Record<string, string>>
 
@@ -222,7 +222,7 @@ makeAuthenticatedRequest(url: string, options?: RequestInit): Promise<Response>
 
 // Handle API response errors
 handleApiResponse(response: Response): Promise<any>
-```
+\`\`\`
 
 #### Architecture Notes
 
@@ -240,7 +240,7 @@ handleApiResponse(response: Response): Promise<any>
 
 #### Usage Examples
 
-```typescript
+\`\`\`typescript
 // Upload audio file (now with JWT authentication)
 const uploadResponse = await getUploadUrl({
   filename: 'recording.mp3',
@@ -256,7 +256,7 @@ const result = await submitAssessment({
   assessment_date: '2024-01-15',
   audio_file_id: uploadResponse.fileId
 })
-```
+\`\`\`
 
 ## Authentication System
 
@@ -298,7 +298,7 @@ AudiScope uses AWS Amplify Authentication for secure user management with email-
 
 ### AuthProvider Functions
 
-```typescript
+\`\`\`typescript
 interface AuthContextType {
   user: User | null
   loading: boolean
@@ -314,7 +314,7 @@ interface AuthContextType {
   getAuthHeaders: () => Promise<Record<string, string>>
   getUserId: () => Promise<string | null>
 }
-```
+\`\`\`
 
 #### JWT Authentication Features
 
@@ -340,7 +340,7 @@ The AuthProvider provides JWT functionality by importing from `lib/api-utils.ts`
 
 ### Route Protection
 
-```typescript
+\`\`\`typescript
 // Dashboard protection example
 <AuthGuard>
   <SidebarProvider>
@@ -348,7 +348,7 @@ The AuthProvider provides JWT functionality by importing from `lib/api-utils.ts`
     <SidebarInset>{children}</SidebarInset>
   </SidebarProvider>
 </AuthGuard>
-```
+\`\`\`
 
 ### Development Notes
 
@@ -375,7 +375,7 @@ AudiScope uses TanStack React Query v5 for efficient server state management, ca
 - React Query DevTools enabled in development (top-right corner)
 
 **Provider Hierarchy:**
-```typescript
+\`\`\`typescript
 <QueryProvider>
   <ThemeProvider>
     <AuthProvider>
@@ -384,15 +384,15 @@ AudiScope uses TanStack React Query v5 for efficient server state management, ca
   </ThemeProvider>
   <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
 </QueryProvider>
-```
+\`\`\`
 
 ### QueryClient Configuration
 
 The QueryClient is configured with default settings in `components/providers/query-provider.tsx`:
 
-```typescript
+\`\`\`typescript
 const [queryClient] = useState(() => new QueryClient());
-```
+\`\`\`
 
 ### Development Tools
 
@@ -415,25 +415,25 @@ React Query works seamlessly with the JWT authentication system:
 
 **Query Keys:**
 Use consistent, hierarchical query keys that include user context:
-```typescript
+\`\`\`typescript
 const queryKey = ['assessments', userId, { status }];
 const queryKey = ['assessment', assessmentId, userId];
-```
+\`\`\`
 
 **Mutations:**
 Combine mutations with optimistic updates and query invalidation:
-```typescript
+\`\`\`typescript
 const mutation = useMutation({
   mutationFn: submitAssessment,
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['assessments'] });
   }
 });
-```
+\`\`\`
 
 **Error Handling:**
 Leverage React Query's built-in error handling with authentication:
-```typescript
+\`\`\`typescript
 const { data, error, isLoading } = useQuery({
   queryKey: ['assessments'],
   queryFn: () => getAssessments(),
@@ -443,7 +443,7 @@ const { data, error, isLoading } = useQuery({
     return failureCount < 3;
   }
 });
-```
+\`\`\`
 
 ### Performance Benefits
 

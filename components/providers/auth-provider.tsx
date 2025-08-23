@@ -1,23 +1,20 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { 
-  signUp, 
-  signIn, 
-  signOut, 
-  getCurrentUser, 
-  confirmSignUp, 
+import type React from "react"
+
+import { createContext, useContext, useEffect, useState } from "react"
+import {
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser,
+  confirmSignUp,
   resendSignUpCode,
   resetPassword,
   confirmResetPassword,
-  type SignUpInput,
-  type SignInInput,
-  type ConfirmSignUpInput,
-  type ResetPasswordInput,
-  type ConfirmResetPasswordInput
-} from 'aws-amplify/auth'
-import { configureAmplify } from '@/lib/auth-config'
-import { getAuthHeaders, getCurrentUserId } from '@/lib/api-utils'
+} from "aws-amplify/auth"
+import { configureAmplify } from "@/lib/auth-config"
+import { getAuthHeaders, getCurrentUserId } from "@/lib/api-utils"
 
 interface User {
   username: string
@@ -45,7 +42,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }
@@ -63,15 +60,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const checkAuthState = async () => {
     try {
       setLoading(true)
+      const hasValidConfig =
+        process.env.NEXT_PUBLIC_USER_POOL_ID &&
+        process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID &&
+        process.env.NEXT_PUBLIC_USER_POOL_ID !== "us-east-1_dummy"
+
+      if (!hasValidConfig) {
+        console.warn("AWS Cognito not configured - skipping auth check")
+        setUser(null)
+        return
+      }
+
       const currentUser = await getCurrentUser()
       setUser({
         username: currentUser.username,
-        email: currentUser.signInDetails?.loginId || '',
+        email: currentUser.signInDetails?.loginId || "",
         attributes: {
           userId: currentUser.userId,
-          email: currentUser.signInDetails?.loginId || '',
-          username: currentUser.username
-        }
+          email: currentUser.signInDetails?.loginId || "",
+          username: currentUser.username,
+        },
       })
       console.log(currentUser)
     } catch (error) {
@@ -85,11 +93,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setLoading(true)
       setError(null)
+
+      const hasValidConfig =
+        process.env.NEXT_PUBLIC_USER_POOL_ID &&
+        process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID &&
+        process.env.NEXT_PUBLIC_USER_POOL_ID !== "us-east-1_dummy"
+
+      if (!hasValidConfig) {
+        throw new Error("AWS Cognito is not properly configured. Please check your environment variables.")
+      }
+
       const result = await signIn({
         username,
-        password
+        password,
       })
-      
+
       if (result.isSignedIn) {
         const currentUser = await getCurrentUser()
         setUser({
@@ -98,12 +116,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           attributes: {
             userId: currentUser.userId,
             email: currentUser.signInDetails?.loginId || username,
-            username: currentUser.username
-          }
+            username: currentUser.username,
+          },
         })
       }
     } catch (error: any) {
-      setError(error.message || 'Failed to sign in')
+      setError(error.message || "Failed to sign in")
       throw error
     } finally {
       setLoading(false)
@@ -120,11 +138,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         options: {
           userAttributes: {
             email,
-          }
-        }
+          },
+        },
       })
     } catch (error: any) {
-      setError(error.message || 'Failed to sign up')
+      setError(error.message || "Failed to sign up")
       throw error
     } finally {
       setLoading(false)
@@ -138,7 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await signOut()
       setUser(null)
     } catch (error: any) {
-      setError(error.message || 'Failed to sign out')
+      setError(error.message || "Failed to sign out")
       throw error
     } finally {
       setLoading(false)
@@ -151,10 +169,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null)
       await confirmSignUp({
         username,
-        confirmationCode: code
+        confirmationCode: code,
       })
     } catch (error: any) {
-      setError(error.message || 'Failed to confirm sign up')
+      setError(error.message || "Failed to confirm sign up")
       throw error
     } finally {
       setLoading(false)
@@ -166,10 +184,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true)
       setError(null)
       await resendSignUpCode({
-        username
+        username,
       })
     } catch (error: any) {
-      setError(error.message || 'Failed to resend confirmation code')
+      setError(error.message || "Failed to resend confirmation code")
       throw error
     } finally {
       setLoading(false)
@@ -181,10 +199,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true)
       setError(null)
       await resetPassword({
-        username
+        username,
       })
     } catch (error: any) {
-      setError(error.message || 'Failed to initiate password reset')
+      setError(error.message || "Failed to initiate password reset")
       throw error
     } finally {
       setLoading(false)
@@ -198,10 +216,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await confirmResetPassword({
         username,
         confirmationCode: code,
-        newPassword
+        newPassword,
       })
     } catch (error: any) {
-      setError(error.message || 'Failed to reset password')
+      setError(error.message || "Failed to reset password")
       throw error
     } finally {
       setLoading(false)
@@ -213,7 +231,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       return await getCurrentUserId()
     } catch (error) {
-      console.error('Failed to get user ID:', error)
+      console.error("Failed to get user ID:", error)
       return null
     }
   }

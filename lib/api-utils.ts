@@ -2,7 +2,7 @@
  * API utility functions for handling authenticated requests with JWT tokens
  */
 
-import { fetchAuthSession } from 'aws-amplify/auth'
+import { fetchAuthSession } from "aws-amplify/auth"
 
 export interface ApiError extends Error {
   status?: number
@@ -15,18 +15,27 @@ export interface ApiError extends Error {
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
+    const hasValidConfig =
+      process.env.NEXT_PUBLIC_USER_POOL_ID &&
+      process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID &&
+      process.env.NEXT_PUBLIC_USER_POOL_ID !== "us-east-1_dummy"
+
+    if (!hasValidConfig) {
+      throw new Error("AWS Cognito is not properly configured")
+    }
+
     const session = await fetchAuthSession()
     const token = session.tokens?.accessToken?.toString()
-    
+
     if (!token) {
-      throw new Error('No access token available')
+      throw new Error("No access token available")
     }
 
     return {
-      'Authorization': `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     }
   } catch (error) {
-    console.error('Failed to get auth headers:', error)
+    console.error("Failed to get auth headers:", error)
     throw error
   }
 }
@@ -36,16 +45,25 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
  */
 export async function getCurrentUserId(): Promise<string> {
   try {
+    const hasValidConfig =
+      process.env.NEXT_PUBLIC_USER_POOL_ID &&
+      process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID &&
+      process.env.NEXT_PUBLIC_USER_POOL_ID !== "us-east-1_dummy"
+
+    if (!hasValidConfig) {
+      throw new Error("AWS Cognito is not properly configured")
+    }
+
     const session = await fetchAuthSession()
     const userId = session.tokens?.accessToken?.payload?.sub as string
-    
+
     if (!userId) {
-      throw new Error('No user ID available in token')
+      throw new Error("No user ID available in token")
     }
-    
+
     return userId
   } catch (error) {
-    console.error('Failed to get user ID:', error)
+    console.error("Failed to get user ID:", error)
     throw error
   }
 }
@@ -53,28 +71,25 @@ export async function getCurrentUserId(): Promise<string> {
 /**
  * Make an authenticated API request with automatic token refresh on auth errors
  */
-export async function makeAuthenticatedRequest(
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const makeRequest = async (forceRefresh: boolean = false): Promise<Response> => {
+export async function makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
+  const makeRequest = async (forceRefresh = false): Promise<Response> => {
     try {
       // Get fresh token if forceRefresh is true
       const session = await fetchAuthSession(forceRefresh ? { forceRefresh: true } : undefined)
       const token = session.tokens?.accessToken?.toString()
-      
+
       if (!token) {
-        throw new Error('No access token available')
+        throw new Error("No access token available")
       }
 
       const headers: Record<string, string> = {
-        'Authorization': `Bearer ${token}`,
-        ...options.headers as Record<string, string>,
+        Authorization: `Bearer ${token}`,
+        ...(options.headers as Record<string, string>),
       }
 
       // Only set content-type for JSON bodies if not already specified
-      if (typeof options.body === 'string' && !headers['Content-Type'] && !headers['content-type']) {
-        headers['Content-Type'] = 'application/json'
+      if (typeof options.body === "string" && !headers["Content-Type"] && !headers["content-type"]) {
+        headers["Content-Type"] = "application/json"
       }
 
       const response = await fetch(url, {
@@ -84,7 +99,7 @@ export async function makeAuthenticatedRequest(
 
       return response
     } catch (error) {
-      console.error('Request failed:', error)
+      console.error("Request failed:", error)
       throw error
     }
   }
@@ -92,32 +107,32 @@ export async function makeAuthenticatedRequest(
   try {
     // First attempt with current token
     const response = await makeRequest()
-    
+
     // If we get 401/403, try refreshing the token once
-    const headers = options.headers as Record<string, string> || {}
-    if ((response.status === 401 || response.status === 403) && !headers['X-Retry-Count']) {
-      console.log('Auth error, attempting token refresh...')
-      
+    const headers = (options.headers as Record<string, string>) || {}
+    if ((response.status === 401 || response.status === 403) && !headers["X-Retry-Count"]) {
+      console.log("Auth error, attempting token refresh...")
+
       const retryOptions = {
         ...options,
         headers: {
           ...options.headers,
-          'X-Retry-Count': '1'
-        }
+          "X-Retry-Count": "1",
+        },
       }
-      
+
       return await makeRequest(true)
     }
-    
+
     return response
   } catch (error) {
     const apiError = error as ApiError
-    
+
     // If it's an auth error, we might want to redirect to login
-    if (apiError.message?.includes('token') || apiError.message?.includes('auth')) {
-      console.error('Authentication failed, user may need to log in again')
+    if (apiError.message?.includes("token") || apiError.message?.includes("auth")) {
+      console.error("Authentication failed, user may need to log in again")
     }
-    
+
     throw error
   }
 }
@@ -128,7 +143,7 @@ export async function makeAuthenticatedRequest(
 export async function handleApiResponse(response: Response): Promise<any> {
   if (!response.ok) {
     let errorMessage = `API Error: ${response.status}`
-    
+
     try {
       const errorData = await response.json()
       errorMessage = errorData.error || errorData.message || errorMessage
@@ -141,12 +156,12 @@ export async function handleApiResponse(response: Response): Promise<any> {
         // Use the default error message
       }
     }
-    
+
     const error = new Error(errorMessage) as ApiError
     error.status = response.status
     error.statusText = response.statusText
     throw error
   }
-  
+
   return response.json()
 }
