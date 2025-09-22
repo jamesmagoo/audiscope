@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { type Chat } from "@/lib/knowlege-base.service"
+import { ChatMessage, type Chat } from "@/lib/knowlege-base.service"
 import { useChats, useDeleteChat } from "@/hooks/use-knowledge-base"
 import { formatDistanceToNow } from "date-fns"
 
@@ -38,7 +38,7 @@ export function ChatsPanel({ activeConversationId, onSelectConversation, onConve
   const deleteChat = useDeleteChat()
   
   // Convert API chats to UI format
-  const conversations: ChatsUI[] = chats.map(chat => ({
+  const conversations: ChatsUI[] = chats.map((chat : ChatMessage) => ({
     ...chat,
     lastMessage: undefined, // API doesn't provide last message yet
     messageCount: 0 // API doesn't provide message count yet

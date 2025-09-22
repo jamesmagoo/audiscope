@@ -18,7 +18,7 @@ import {
     Target,
     TrendingUp,
 } from "lucide-react"
-import apiClient, {type AssessmentRecord, AudioSegment} from "@/lib/audio-pipeline-api.service"
+import { apiClient, type AssessmentRecord, AudioSegment } from "@/lib/audio-pipeline-api.service"
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert"
 import {Button} from "@/components/ui/button"
 
