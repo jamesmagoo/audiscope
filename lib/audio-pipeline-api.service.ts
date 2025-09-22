@@ -1,5 +1,6 @@
-import { getAuthHeaders, getCurrentUserId } from "./api-utils"
+import { getCurrentUserId, getAuthHeaders } from './api-utils'
 
+// Replace with your actual API endpoint after deployment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
 export interface FileUploadRequest {
@@ -209,12 +210,13 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
   }
 }
 
-const apiClient = {
-  getUploadUrl,
+/**
+ * Complete API client for our backend
+ */
+export const apiClient = {
   submitAssessment,
+  getUploadUrl,
   getRecords,
   getAssessmentById,
   getRecordById,
 }
-
-export default apiClient

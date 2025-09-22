@@ -1,156 +1,135 @@
 "use client"
 
-import { useState } from "react"
-import { ChatSidebar } from "@/components/chat/chat-sidebar"
-import { ChatArea } from "@/components/chat/chat-area"
-import type { Conversation, Document, Message } from "@/components/chat/types"
+import { useState, useEffect } from "react"
+import { ChatsPanel } from "@/components/assistant/chats-panel"
+import { ChatInterface } from "@/components/assistant/chat-interface"
+import { KnowledgeBasePanel } from "@/components/assistant/knowledge-base-panel"
+import { Button } from "@/components/ui/button"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function AssistantPage() {
-  const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "1",
-      title: "Medical Case Analysis",
-      messages: [
-        {
-          id: "1",
-          content:
-            "Hello! I can help you analyze medical cases using your knowledge base. Upload documents to get started.",
-          role: "assistant",
-          timestamp: new Date(),
-        },
-      ],
-      lastMessage: new Date(),
-    },
-  ])
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true)
+  const [rightPanelOpen, setRightPanelOpen] = useState(true)
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
 
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: "1",
-      name: "Surgical Guidelines 2024.pdf",
-      type: "application/pdf",
-      size: 2048000,
-      uploadDate: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "2",
-      name: "Patient Assessment Protocol.docx",
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      size: 1024000,
-      uploadDate: new Date(Date.now() - 172800000),
-    },
-  ])
-
-  const [activeConversationId, setActiveConversationId] = useState<string>("1")
-  const [inputMessage, setInputMessage] = useState("")
-
-  const activeConversation = conversations.find((c) => c.id === activeConversationId)
-
-  const createNewConversation = () => {
-    const newId = Date.now().toString()
-    const newConversation: Conversation = {
-      id: newId,
-      title: "New Conversation",
-      messages: [
-        {
-          id: "1",
-          content: "Hello! How can I assist you with your medical knowledge base today?",
-          role: "assistant",
-          timestamp: new Date(),
-        },
-      ],
-      lastMessage: new Date(),
-    }
-
-    setConversations((prev) => [newConversation, ...prev])
-    setActiveConversationId(newId)
-  }
-
-  const handleFileUpload = (files: FileList) => {
-    Array.from(files).forEach((file) => {
-      const newDocument: Document = {
-        id: Date.now().toString() + Math.random(),
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        uploadDate: new Date(),
+  // Responsive behavior: close panels on mobile by default
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window !== "undefined" && window.innerWidth < 768) {
+        setLeftPanelOpen(false)
+        setRightPanelOpen(false)
       }
-
-      setDocuments((prev) => [newDocument, ...prev])
-    })
-  }
-
-  const deleteDocument = (docId: string) => {
-    setDocuments((prev) => prev.filter((doc) => doc.id !== docId))
-  }
-
-  const sendMessage = () => {
-    if (!inputMessage.trim() || !activeConversation) return
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputMessage,
-      role: "user",
-      timestamp: new Date(),
     }
-
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversationId
-          ? {
-              ...conv,
-              messages: [...conv.messages, userMessage],
-              lastMessage: new Date(),
-              title: conv.title === "New Conversation" ? inputMessage.slice(0, 30) + "..." : conv.title,
-            }
-          : conv,
-      ),
-    )
-
-    setInputMessage("")
-
-    setTimeout(() => {
-      const relatedDocs = documents.slice(0, 2).map((doc) => doc.name)
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `Based on your knowledge base, I've found relevant information in your uploaded documents. Let me analyze this medical case using the available resources.`,
-        role: "assistant",
-        timestamp: new Date(),
-        relatedDocuments: relatedDocs,
-      }
-
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === activeConversationId
-            ? {
-                ...conv,
-                messages: [...conv.messages, assistantMessage],
-                lastMessage: new Date(),
-              }
-            : conv,
-        ),
-      )
-    }, 1000)
-  }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   return (
-    <div className="flex h-screen bg-background">
-      <ChatSidebar
-        conversations={conversations}
-        documents={documents}
-        activeConversationId={activeConversationId}
-        onConversationSelect={setActiveConversationId}
-        onNewConversation={createNewConversation}
-        onFileUpload={handleFileUpload}
-        onDeleteDocument={deleteDocument}
-      />
+    <div className="flex h-full w-full bg-background relative">
+      {/* Left Panel - Conversations */}
+      <div className={cn(
+        "flex-shrink-0 transition-all duration-300 ease-in-out border-r border-border",
+        "md:relative absolute top-0 left-0 z-20 h-full bg-background",
+        leftPanelOpen ? "w-80 md:w-80" : "w-0 md:w-0"
+      )}>
+        <div className="h-full overflow-hidden">
+          <ChatsPanel 
+            activeConversationId={activeConversationId}
+            onSelectConversation={(id) => {
+              setActiveConversationId(id)
+              // Auto-close on mobile when conversation is selected
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setLeftPanelOpen(false)
+              }
+            }}
+            onConversationCreated={(chat) => {
+              setActiveConversationId(chat.id)
+            }}
+          />
+        </div>
+      </div>
 
-      <ChatArea
-        conversation={activeConversation}
-        documents={documents}
-        inputMessage={inputMessage}
-        onInputChange={setInputMessage}
-        onSendMessage={sendMessage}
-      />
+      {/* Overlay for mobile */}
+      {leftPanelOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-10 md:hidden"
+          style={{ top: '4rem' }}
+          onClick={() => setLeftPanelOpen(false)}
+        />
+      )}
+
+      {/* Main Sidebar Trigger (Mobile) */}
+      <div className="absolute top-4 left-2 z-40 md:hidden">
+        <SidebarTrigger />
+      </div>
+
+      {/* Left Panel Toggle Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+        className={cn(
+          "absolute top-4 z-30 h-8 w-8 p-0 hover:bg-muted transition-all",
+          leftPanelOpen ? "left-[316px] md:left-[316px]" : "left-12 md:left-2"
+        )}
+      >
+        {leftPanelOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+      </Button>
+
+      {/* Main Chat Interface */}
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0 transition-all duration-300",
+        leftPanelOpen && "md:ml-0 ml-0"
+      )}>
+        <ChatInterface 
+          conversationId={activeConversationId} 
+          onConversationUpdate={(chat) => {
+            // Update the conversation ID if it was just created
+            if (!activeConversationId && chat.id) {
+              setActiveConversationId(chat.id)
+            }
+          }}
+          onNewConversation={() => {
+            // Reset to new conversation state
+            setActiveConversationId(null)
+          }}
+        />
+      </div>
+
+      {/* Right Panel Toggle Button */}
+      {/* <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setRightPanelOpen(!rightPanelOpen)}
+        className={cn(
+          "absolute top-4 z-30 h-8 w-8 p-0 hover:bg-muted transition-all",
+          rightPanelOpen ? "right-[316px] md:right-[316px]" : "right-2"
+        )}
+      >
+        {rightPanelOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+      </Button> */}
+
+      {/* Right Panel - Knowledge Base */}
+      {/* <div className={cn(
+        "flex-shrink-0 transition-all duration-300 ease-in-out border-l border-border",
+        "md:relative absolute top-0 right-0 z-20 h-full bg-background",
+        rightPanelOpen ? "w-80 md:w-80" : "w-0 md:w-0"
+      )}>
+        <div className="h-full overflow-hidden">
+          <KnowledgeBasePanel />
+        </div>
+      </div> */}
+
+      {/* Overlay for mobile right panel */}
+      {/* {rightPanelOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-10 md:hidden"
+          onClick={() => setRightPanelOpen(false)}
+        />
+      )} */}
     </div>
   )
 }

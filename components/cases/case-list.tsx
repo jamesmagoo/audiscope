@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Eye, FileText, Loader2 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
-import apiClient, { type AssessmentRecord } from "@/lib/aws-api.service"
+import { apiClient, type AssessmentRecord } from "@/lib/audio-pipeline-api.service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface CaseListProps {
