@@ -69,7 +69,7 @@ export function AppSidebar() {
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true },
     { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true },
-    { name: "Device Library", href: "/dashboard/devices", icon: Package, disabled: true },
+    { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
     { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true },
   ]
 
