@@ -68,14 +68,23 @@ export function ProductForm() {
 
       console.log('ProductForm: Product created:', product)
 
+      // Extract the product ID (handle multiple naming conventions: id, productID, ProductID)
+      const productId = (product as any).id || product.productID || (product as any).ProductID
+      const productName = product.name || (product as any).Name || 'Product'
+
       toast({
         title: 'Product Created Successfully!',
-        description: `${product.name || product.Name || 'Product'} has been created. Files are being processed.`,
+        description: `${productName} has been created. Files are being processed.`,
       })
 
-      // Navigate to products page (detail page can be added later)
-      console.log('ProductForm: Navigating to products list...')
-      router.push(`/dashboard/products`)
+      // Navigate to product detail page using the UUID
+      if (productId) {
+        console.log('ProductForm: Navigating to product detail:', productId)
+        router.push(`/dashboard/products/${productId}`)
+      } else {
+        console.warn('ProductForm: No product ID returned, navigating to list')
+        router.push(`/dashboard/products`)
+      }
     } catch (error) {
       console.error('ProductForm: Failed to create product:', error)
       toast({

@@ -62,18 +62,26 @@ export interface ProductFileInfo {
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
-// Product response
+// Product response (matches actual backend format with snake_case)
 export interface ProductResponse {
-  productID: string
-  organizationID: string
+  id: string
+  organization_id?: string
   name: string
   manufacturer: string
-  modelNumber: string
+  model_number: string
   category: string
   status: 'draft' | 'active' | 'archived'
   description: string
-  createdAt: string
+  created_at: string
+  updated_at?: string
   files?: ProductFileInfo[]
+
+  // Also support alternative naming conventions for compatibility
+  productID?: string
+  organizationID?: string
+  modelNumber?: string
+  createdAt?: string
+  ProductID?: string
 }
 
 /**
@@ -261,18 +269,19 @@ export async function listProducts(
 
     // Handle different response formats
     if (Array.isArray(data)) {
-      console.log('listProducts: Retrieved', data.length, 'products')
+      console.log('listProducts: Retrieved', data.length, 'products (direct array)')
       return data
     } else if (data && typeof data === 'object') {
-      // Check for common wrapper properties
+      // Check for common wrapper properties (backend returns { products: [...], total_count: N, ... })
       const products = data.products || data.Products || data.data || data.Data
       if (Array.isArray(products)) {
-        console.log('listProducts: Retrieved', products.length, 'products (from wrapper)')
+        console.log('listProducts: Retrieved', products.length, 'products (from wrapper property)')
+        console.log('listProducts: Total count:', data.total_count || data.totalCount || 'unknown')
         return products
       }
     }
 
-    console.warn('listProducts: Unexpected response format, returning empty array')
+    console.warn('listProducts: Unexpected response format, returning empty array. Data:', data)
     return []
   } catch (error) {
     console.error('Error listing products:', error)

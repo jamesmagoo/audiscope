@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useProducts } from '@/hooks/use-products'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -78,44 +79,52 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
   return (
     <div className="space-y-4">
       {filteredProducts.map((product: any, index: number) => {
-        // Handle both camelCase and PascalCase property names
-        const productId = product.productID || product.ProductID || `product-${index}`
+        // Handle multiple naming conventions: id, productID, ProductID
+        const productId = product.id || product.productID || product.ProductID
         const name = product.name || product.Name || 'Unnamed Product'
         const manufacturer = product.manufacturer || product.Manufacturer || 'Unknown'
-        const modelNumber = product.modelNumber || product.ModelNumber || 'N/A'
+        const modelNumber = product.model_number || product.modelNumber || product.ModelNumber || 'N/A'
         const category = product.category || product.Category || 'other'
         const description = product.description || product.Description
         const files = product.files || product.Files
 
+        // Skip products without valid IDs
+        if (!productId) {
+          console.warn('ProductList: Product missing ID, skipping:', product)
+          return null
+        }
+
         return (
-          <Card key={productId} className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle>{name}</CardTitle>
-                  <CardDescription>
-                    {manufacturer} • Model: {modelNumber}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline">{category}</Badge>
-              </div>
-            </CardHeader>
-            {description && (
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {description}
-                </p>
-                {files && files.length > 0 && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">
-                      {files.length} file{files.length !== 1 ? 's' : ''}
-                    </p>
+          <Link key={productId} href={`/dashboard/products/${productId}`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer mb-2">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>{name}</CardTitle>
+                    <CardDescription>
+                      {manufacturer} • Model: {modelNumber}
+                    </CardDescription>
                   </div>
-                )}
-              </CardContent>
-            )}
-          </Card>
+                  <Badge variant="outline">{category}</Badge>
+                </div>
+              </CardHeader>
+              {description && (
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {description}
+                  </p>
+                  {files && files.length > 0 && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">
+                        {files.length} file{files.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          </Link>
         )
       })}
     </div>
