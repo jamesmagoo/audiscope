@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import NextImage from 'next/image'
 import { useProduct } from '@/hooks/use-products'
 import { useProductChat } from '@/hooks/use-product-chat'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +29,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { ProductChatTab } from './product-chat-tab'
+import { getProductImage, getFileDownloadUrl } from '@/lib/product-utils'
 
 interface ProductDetailsProps {
   id: string
@@ -147,14 +149,18 @@ export function ProductDetails({ id }: ProductDetailsProps) {
   console.log('ProductDetails: Product data:', product)
   console.log('ProductDetails: Using product ID:', productId, 'for API calls')
 
+  // Extract product image
+  const productImage = getProductImage(files)
+  const imageUrl = productImage ? getFileDownloadUrl(productImage) : null
+
   // Calculate file processing progress
   const totalFiles = files.length
   const completedFiles = files.filter((f: any) =>
-    (f.processingStatus || f.ProcessingStatus) === 'completed'
+    (f.processing_status || f.processingStatus || f.ProcessingStatus) === 'completed'
   ).length
   const processingProgress = totalFiles > 0 ? (completedFiles / totalFiles) * 100 : 0
   const hasProcessingFiles = files.some((f: any) => {
-    const fileStatus = f.processingStatus || f.ProcessingStatus
+    const fileStatus = f.processing_status || f.processingStatus || f.ProcessingStatus
     return fileStatus === 'pending' || fileStatus === 'processing'
   })
 
@@ -195,23 +201,41 @@ export function ProductDetails({ id }: ProductDetailsProps) {
           {/* Product Information Card */}
           <Card>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-2xl">{name}</CardTitle>
-                  <CardDescription className="text-base">
-                    {manufacturer} • Model: {modelNumber}
-                  </CardDescription>
+              <div className="flex items-start gap-6">
+                {/* Product Image */}
+                <div className="flex-shrink-0 w-32 h-32 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center">
+                  {imageUrl ? (
+                    <NextImage
+                      src={imageUrl}
+                      alt={name}
+                      width={128}
+                      height={128}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <Package className="h-16 w-16 text-muted-foreground/40" />
+                  )}
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge variant="outline" className="capitalize">
-                    {category}
-                  </Badge>
-                  <Badge
-                    variant={status === 'active' ? 'default' : 'secondary'}
-                    className="capitalize"
-                  >
-                    {status}
-                  </Badge>
+
+                {/* Product Info */}
+                <div className="flex-1 flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-2xl">{name}</CardTitle>
+                    <CardDescription className="text-base">
+                      {manufacturer} • Model: {modelNumber}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant="outline" className="capitalize">
+                      {category}
+                    </Badge>
+                    <Badge
+                      variant={status === 'active' ? 'default' : 'secondary'}
+                      className="capitalize"
+                    >
+                      {status}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -270,10 +294,10 @@ export function ProductDetails({ id }: ProductDetailsProps) {
                 {/* File Status Summary */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   {files.map((file: any, index: number) => {
-                    const fileId = file.fileID || file.FileID || `file-${index}`
-                    const fileName = file.fileName || file.FileName || 'Unknown File'
-                    const fileType = file.fileType || file.FileType || 'unknown'
-                    const fileStatus = file.processingStatus || file.ProcessingStatus || 'unknown'
+                    const fileId = file.id || file.fileID || file.FileID || `file-${index}`
+                    const fileName = file.file_name || file.fileName || file.FileName || 'Unknown File'
+                    const fileType = file.file_type || file.fileType || file.FileType || 'unknown'
+                    const fileStatus = file.processing_status || file.processingStatus || file.ProcessingStatus || 'unknown'
                     const statusDisplay = getProcessingStatusDisplay(fileStatus)
                     const Icon = statusDisplay.icon
 

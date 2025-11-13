@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useRouter } from 'next/navigation'
+import { Package, X } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +35,7 @@ export function ProductForm() {
 
   const [files, setFiles] = useState<FileWithMetadata[]>([])
   const [fileProgress, setFileProgress] = useState<Record<string, number>>({})
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -45,6 +47,30 @@ export function ProductForm() {
       description: '',
     },
   })
+
+  // Extract product image from files
+  const productImage = useMemo(() => {
+    return files.find(f => f.fileType === 'product_image')
+  }, [files])
+
+  // Create object URL for image preview and clean up on unmount
+  useEffect(() => {
+    if (productImage?.file) {
+      const url = URL.createObjectURL(productImage.file)
+      setImagePreviewUrl(url)
+
+      return () => {
+        URL.revokeObjectURL(url)
+        setImagePreviewUrl(null)
+      }
+    } else {
+      setImagePreviewUrl(null)
+    }
+  }, [productImage])
+
+  const removeProductImage = () => {
+    setFiles(prevFiles => prevFiles.filter(f => f.fileType !== 'product_image'))
+  }
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -203,6 +229,58 @@ export function ProductForm() {
                 </FormItem>
               )}
             />
+          </CardContent>
+        </Card>
+
+        {/* Product Image Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Product Image</CardTitle>
+            <CardDescription>
+              Preview of the product image (optional)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              {/* Image Preview */}
+              <div className="flex-shrink-0 w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center overflow-hidden bg-muted/20">
+                {imagePreviewUrl ? (
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Product preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Package className="h-16 w-16 text-muted-foreground/40" />
+                )}
+              </div>
+
+              {/* Image Info */}
+              <div className="flex-1 space-y-2">
+                {productImage ? (
+                  <>
+                    <p className="text-sm font-medium">{productImage.file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(productImage.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={removeProductImage}
+                      disabled={isPending}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Remove Image
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No product image selected. Add an image file in the section below.
+                  </p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

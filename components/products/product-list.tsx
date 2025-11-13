@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useProducts } from '@/hooks/use-products'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Package } from 'lucide-react'
+import { getProductImage, getFileDownloadUrl } from '@/lib/product-utils'
 
 interface ProductListProps {
   searchTerm?: string
@@ -87,6 +89,7 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
         const category = product.category || product.Category || 'other'
         const description = product.description || product.Description
         const files = product.files || product.Files
+        const totalFiles = product.total_files || product.totalFiles || product.TotalFiles || 0
 
         // Skip products without valid IDs
         if (!productId) {
@@ -94,35 +97,57 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
           return null
         }
 
+        // Extract product image
+        const productImage = getProductImage(files)
+        const imageUrl = productImage ? getFileDownloadUrl(productImage) : null
+
         return (
           <Link key={productId} href={`/dashboard/products/${productId}`}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer mb-2">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle>{name}</CardTitle>
-                    <CardDescription>
-                      {manufacturer} • Model: {modelNumber}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline">{category}</Badge>
+              <div className="flex items-start p-6 gap-4">
+                {/* Product Image Thumbnail */}
+                <div className="flex-shrink-0 w-20 h-20 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center">
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={name}
+                      width={80}
+                      height={80}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <Package className="h-10 w-10 text-muted-foreground/40" />
+                  )}
                 </div>
-              </CardHeader>
-              {description && (
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {description}
-                  </p>
-                  {files && files.length > 0 && (
-                    <div className="mt-4 flex items-center gap-2">
+
+                {/* Product Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <CardTitle className="text-lg">{name}</CardTitle>
+                      <CardDescription>
+                        {manufacturer} • Model: {modelNumber}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="flex-shrink-0">{category}</Badge>
+                  </div>
+
+                  {description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {description}
+                    </p>
+                  )}
+
+                  {totalFiles > 0 && (
+                    <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-muted-foreground" />
                       <p className="text-xs text-muted-foreground">
-                        {files.length} file{files.length !== 1 ? 's' : ''}
+                        {totalFiles} file{totalFiles !== 1 ? 's' : ''}
                       </p>
                     </div>
                   )}
-                </CardContent>
-              )}
+                </div>
+              </div>
             </Card>
           </Link>
         )

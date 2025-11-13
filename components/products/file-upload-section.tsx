@@ -49,7 +49,13 @@ export function FileUploadSection({
       fileType: getDefaultFileType(file),
     }))
 
-    onFilesChange([...files, ...newFiles])
+    // Handle single image constraint: remove existing product_image if new image is added
+    const hasNewImage = newFiles.some(f => f.fileType === 'product_image')
+    const filteredFiles = hasNewImage
+      ? files.filter(f => f.fileType !== 'product_image')
+      : files
+
+    onFilesChange([...filteredFiles, ...newFiles])
   }, [files, onFilesChange])
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,18 +67,34 @@ export function FileUploadSection({
       fileType: getDefaultFileType(file),
     }))
 
-    onFilesChange([...files, ...newFiles])
+    // Handle single image constraint: remove existing product_image if new image is added
+    const hasNewImage = newFiles.some(f => f.fileType === 'product_image')
+    const filteredFiles = hasNewImage
+      ? files.filter(f => f.fileType !== 'product_image')
+      : files
+
+    onFilesChange([...filteredFiles, ...newFiles])
   }, [files, onFilesChange])
 
   const removeFile = useCallback((index: number) => {
     onFilesChange(files.filter((_, i) => i !== index))
   }, [files, onFilesChange])
 
-  const updateFileType = useCallback((index: number, fileType: string) => {
+  const updateFileType = useCallback((index: number, newFileType: string) => {
     const updated = [...files]
-    updated[index].fileType = fileType
-    onFilesChange(updated)
+    updated[index].fileType = newFileType
+
+    // Handle single image constraint: if changing to product_image, remove any OTHER product_image
+    if (newFileType === 'product_image') {
+      const filtered = updated.filter((f, i) => i === index || f.fileType !== 'product_image')
+      onFilesChange(filtered)
+    } else {
+      onFilesChange(updated)
+    }
   }, [files, onFilesChange])
+
+  // Check if there's already a product_image
+  const hasProductImage = files.some(f => f.fileType === 'product_image')
 
   return (
     <Card>
@@ -153,11 +175,24 @@ export function FileUploadSection({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {FILE_TYPE_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
+                        {FILE_TYPE_OPTIONS.map(option => {
+                          // Disable product_image option if one already exists and this isn't it
+                          const isProductImageDisabled =
+                            option.value === 'product_image' &&
+                            hasProductImage &&
+                            fileItem.fileType !== 'product_image'
+
+                          return (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              disabled={isProductImageDisabled}
+                            >
+                              {option.label}
+                              {isProductImageDisabled && ' (Only one allowed)'}
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
 
