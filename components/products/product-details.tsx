@@ -443,7 +443,7 @@ export function ProductDetails({ id }: ProductDetailsProps) {
         </TabsContent>
 
         {/* Chat Tab */}
-        <TabsContent value="chat" className="flex-1 overflow-hidden p-0">
+        <TabsContent value="chat" className="flex-1 overflow-hidden p-0 min-h-0">
           <ProductChatTab
             productId={productId}
             productName={name}

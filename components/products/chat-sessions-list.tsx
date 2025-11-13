@@ -138,7 +138,7 @@ export function ChatSessionsList({
 
   return (
     <>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full min-h-0">
         {/* Header */}
         <div className="p-4 border-b flex-shrink-0">
           <Button
@@ -161,7 +161,7 @@ export function ChatSessionsList({
         </div>
 
         {/* Sessions List - Scrollable */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div className="p-2 space-y-1">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">

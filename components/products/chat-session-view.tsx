@@ -123,7 +123,7 @@ export function ChatSessionView({ sessionId, productId, productName }: ChatSessi
   const Icon = typeConfig?.icon || MessageSquareText
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden min-h-0">
       {/* Session Header */}
       <div className="border-b p-4 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export function ChatSessionView({ sessionId, productId, productName }: ChatSessi
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-md">

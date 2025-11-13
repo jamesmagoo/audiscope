@@ -28,12 +28,12 @@ export function ProductChatTab({
   }
 
   return (
-    <div className="h-full overflow-hidden">
-      <Card className="h-full overflow-hidden">
-        <CardContent className="p-0 h-full overflow-hidden">
-          <div className="grid grid-cols-12 gap-0 h-full">
+    <div className="h-full overflow-hidden min-h-0">
+      <Card className="h-full overflow-hidden min-h-0">
+        <CardContent className="p-0 h-full overflow-hidden min-h-0">
+          <div className="grid grid-cols-12 gap-0 h-full min-h-0">
           {/* Left sidebar: Chat session list */}
-          <div className="col-span-12 md:col-span-4 lg:col-span-3 border-r h-full overflow-hidden">
+          <div className="col-span-12 md:col-span-4 lg:col-span-3 border-r h-full overflow-hidden min-h-0">
             <ChatSessionsList
               productId={productId}
               activeSessionId={activeSessionId}
@@ -43,7 +43,7 @@ export function ProductChatTab({
           </div>
 
           {/* Right main area: Active chat */}
-          <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full overflow-hidden">
+          <div className="col-span-12 md:col-span-8 lg:col-span-9 h-full overflow-hidden min-h-0">
             {activeSessionId ? (
               <ChatSessionView
                 sessionId={activeSessionId}

@@ -14,7 +14,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params
 
   return (
-    <div className="flex-1 flex flex-col p-4 md:p-8 pt-6 overflow-hidden">
+    <div className="flex-1 flex flex-col p-4 md:p-8 pt-6 overflow-hidden h-full max-h-screen">
       <div className="flex-shrink-0 mb-4">
         <DashboardHeader
           title="Product Details"
