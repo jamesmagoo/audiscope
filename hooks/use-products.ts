@@ -15,16 +15,47 @@ import {
 export function useProduct(id: string | null) {
   return useQuery({
     queryKey: ['product', id],
-    queryFn: () => id ? productApiClient.getProduct(id) : null,
+    queryFn: () => {
+      console.log('useProduct: queryFn called at', new Date().toISOString())
+      return id ? productApiClient.getProduct(id) : null
+    },
     enabled: !!id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 0, // Disable staleness for debugging
     refetchInterval: (query) => {
       // Poll every 5 seconds if files are still processing
+      // Stop polling when all files are in terminal states (completed or failed)
       const data = query.state.data
-      const hasProcessingFiles = data?.files?.some(
-        (f) => f.processingStatus === 'pending' || f.processingStatus === 'processing'
-      )
-      return hasProcessingFiles ? 5000 : false
+
+      // Debug logging
+      console.log('useProduct refetchInterval check:', {
+        timestamp: new Date().toISOString(),
+        hasData: !!data,
+        filesCount: data?.files?.length || 0,
+        files: data?.files
+      })
+
+      if (!data?.files || data.files.length === 0) {
+        console.log('useProduct: No files, not polling')
+        return false
+      }
+
+      const hasActiveProcessingFiles = data.files.some((f: any) => {
+        const status = f.processing_status || f.processingStatus || f.ProcessingStatus
+        const isActive = status === 'pending' || status === 'processing'
+        console.log('File status check:', {
+          fileName: f.file_name || f.fileName || f.FileName,
+          fileType: f.file_type || f.fileType || f.FileType,
+          status,
+          isActive
+        })
+        // Only return true for pending/processing, NOT for failed or completed
+        return isActive
+      })
+
+      const interval = hasActiveProcessingFiles ? 5000 : false
+      console.log('useProduct refetchInterval result:', { hasActiveProcessingFiles, interval })
+
+      return interval
     }
   })
 }

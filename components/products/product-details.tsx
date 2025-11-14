@@ -152,6 +152,25 @@ export function ProductDetails({ id }: ProductDetailsProps) {
   // Extract product image
   const productImage = getProductImage(files)
   const imageUrl = productImage ? getFileDownloadUrl(productImage) : null
+  const imageStatus = productImage
+    ? (productImage.processing_status || productImage.processingStatus || productImage.ProcessingStatus || 'unknown')
+    : null
+  const isImageProcessing = imageStatus === 'pending' || imageStatus === 'processing'
+  const isImageFailed = imageStatus === 'failed'
+  const imageError = productImage
+    ? (productImage.processing_error || productImage.processingError || productImage.ProcessingError)
+    : null
+
+  console.log('ProductDetails - Image Debug:', {
+    hasProductImage: !!productImage,
+    productImage,
+    imageUrl,
+    imageStatus,
+    isImageProcessing,
+    isImageFailed,
+    imageError,
+    allFiles: files
+  })
 
   // Calculate file processing progress
   const totalFiles = files.length
@@ -203,8 +222,8 @@ export function ProductDetails({ id }: ProductDetailsProps) {
             <CardHeader>
               <div className="flex items-start gap-6">
                 {/* Product Image */}
-                <div className="flex-shrink-0 w-32 h-32 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center">
-                  {imageUrl ? (
+                <div className="flex-shrink-0 w-32 h-32 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center relative">
+                  {imageUrl && !isImageProcessing && !isImageFailed ? (
                     <NextImage
                       src={imageUrl}
                       alt={name}
@@ -212,6 +231,16 @@ export function ProductDetails({ id }: ProductDetailsProps) {
                       height={128}
                       className="object-cover w-full h-full"
                     />
+                  ) : isImageProcessing ? (
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span className="text-xs text-muted-foreground">Processing...</span>
+                    </div>
+                  ) : isImageFailed ? (
+                    <div className="flex flex-col items-center justify-center gap-2 p-2" title={imageError || 'Upload failed'}>
+                      <AlertCircle className="h-8 w-8 text-destructive" />
+                      <span className="text-xs text-destructive text-center">Upload Failed</span>
+                    </div>
                   ) : (
                     <Package className="h-16 w-16 text-muted-foreground/40" />
                   )}

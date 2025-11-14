@@ -29,19 +29,17 @@ export interface ProductFile {
 /**
  * Extract the primary product image from a product's files array
  * Handles multiple naming conventions (snake_case, camelCase, PascalCase)
- * Returns only completed images
+ * Returns product_image regardless of processing status (for immediate display)
  */
 export function getProductImage(files?: ProductFile[]): ProductFile | null {
   if (!files || files.length === 0) {
     return null
   }
 
-  // Find first product_image with completed status
+  // Find first product_image (regardless of status)
   const productImage = files.find((file) => {
     const fileType = file.file_type || file.fileType || file.FileType
-    const status = file.processing_status || file.processingStatus || file.ProcessingStatus
-
-    return fileType === 'product_image' && status === 'completed'
+    return fileType === 'product_image'
   })
 
   return productImage || null

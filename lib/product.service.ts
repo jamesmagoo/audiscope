@@ -60,6 +60,16 @@ export interface ProductFileInfo {
   fileType: string
   fileSize: number
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
+  downloadUrl?: string
+  processingError?: string
+  // Support multiple naming conventions
+  file_id?: string
+  file_name?: string
+  file_type?: string
+  file_size?: number
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed'
+  download_url?: string
+  processing_error?: string
 }
 
 // Product response (matches actual backend format with snake_case)
@@ -235,6 +245,8 @@ export async function getProduct(id: string): Promise<ProductResponse> {
 
     const product = await handleApiResponse(response)
     console.log('getProduct: Retrieved product:', product.name)
+    console.log('getProduct: Full response:', product)
+    console.log('getProduct: Files in response:', product.files)
 
     return product
   } catch (error) {

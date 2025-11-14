@@ -1,4 +1,5 @@
 import { fetchAuthSession } from "aws-amplify/auth"
+import { logJWTClaims } from "./jwt-debug"
 
 export interface ApiError extends Error {
   status?: number
@@ -38,6 +39,46 @@ export async function getCurrentUserId(): Promise<string> {
     console.error("Failed to get user ID:", error)
     throw error
   }
+}
+
+/**
+ * Debug function to inspect JWT token and custom attributes
+ * Call this from browser console: window.debugJWT()
+ */
+export async function debugJWT(): Promise<void> {
+  try {
+    const session = await fetchAuthSession()
+    const token = session.tokens?.accessToken?.toString()
+
+    if (!token) {
+      console.error('❌ No access token found')
+      return
+    }
+
+    console.log('🎫 Access Token (raw):', token)
+    console.log('---')
+
+    // Decode and log claims
+    logJWTClaims(token)
+
+    console.log('---')
+    console.log('📦 Full Token Payload:', session.tokens?.accessToken?.payload)
+
+    // Check for custom attributes
+    const payload = session.tokens?.accessToken?.payload as any
+    console.log('---')
+    console.log('🔍 Checking for custom attributes:')
+    console.log('  organisation_id:', payload?.organisation_id || payload?.['custom:organisation_id'] || '❌ NOT FOUND')
+    console.log('  role:', payload?.role || payload?.['custom:role'] || '❌ NOT FOUND')
+
+  } catch (error) {
+    console.error('Error debugging JWT:', error)
+  }
+}
+
+// Make it available in browser console
+if (typeof window !== 'undefined') {
+  (window as any).debugJWT = debugJWT
 }
 
 /**
