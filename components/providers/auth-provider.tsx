@@ -11,6 +11,8 @@ import {
   resendSignUpCode,
   resetPassword,
   confirmResetPassword,
+  confirmSignIn,
+  type SignInOutput,
 } from "aws-amplify/auth"
 import { Amplify } from "aws-amplify"
 
@@ -34,13 +36,14 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   error: string | null
-  signInUser: (username: string, password: string) => Promise<void>
+  signInUser: (username: string, password: string) => Promise<SignInOutput>
   signUpUser: (username: string, password: string, email: string) => Promise<void>
   signOutUser: () => Promise<void>
   confirmSignUpUser: (username: string, code: string) => Promise<void>
   resendConfirmationCode: (username: string) => Promise<void>
   forgotPassword: (username: string) => Promise<void>
   confirmForgotPassword: (username: string, code: string, newPassword: string) => Promise<void>
+  completeNewPassword: (newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -91,6 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (result.isSignedIn) {
         await checkAuthState()
       }
+      return result
     } catch (error: any) {
       setError(error.message || "Failed to sign in")
       throw error
@@ -182,6 +186,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
+  const completeNewPassword = async (newPassword: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await confirmSignIn({ challengeResponse: newPassword })
+      if (result.isSignedIn) {
+        await checkAuthState()
+      }
+    } catch (error: any) {
+      setError(error.message || "Failed to set new password")
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -193,6 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     resendConfirmationCode,
     forgotPassword,
     confirmForgotPassword,
+    completeNewPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
