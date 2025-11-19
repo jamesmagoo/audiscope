@@ -15,6 +15,7 @@ import {
   type SignInOutput,
 } from "aws-amplify/auth"
 import { Amplify } from "aws-amplify"
+import * as Sentry from "@sentry/nextjs"
 
 const authConfig = {
   Auth: {
@@ -70,7 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setLoading(true)
       const currentUser = await getCurrentUser()
-      setUser({
+      const userData = {
         username: currentUser.username,
         email: currentUser.signInDetails?.loginId || "",
         attributes: {
@@ -78,9 +79,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           email: currentUser.signInDetails?.loginId || "",
           username: currentUser.username,
         },
+      }
+      setUser(userData)
+
+      // Set Sentry user context
+      Sentry.setUser({
+        id: currentUser.userId,
+        email: currentUser.signInDetails?.loginId || "",
+        username: currentUser.username,
       })
     } catch (error) {
       setUser(null)
+      // Clear Sentry user context if no user is authenticated
+      Sentry.setUser(null)
     } finally {
       setLoading(false)
     }
@@ -126,6 +137,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null)
       await signOut()
       setUser(null)
+      // Clear Sentry user context on sign out
+      Sentry.setUser(null)
     } catch (error: any) {
       setError(error.message || "Failed to sign out")
       throw error
