@@ -6,6 +6,18 @@ export interface ApiError extends Error {
   statusText?: string
 }
 
+/**
+ * Get client identification headers for tracking which client is making requests
+ * These headers help with debugging, monitoring, and platform-specific issue tracking
+ */
+export function getClientHeaders(): Record<string, string> {
+  return {
+    'X-Client-Platform': 'web',
+    'X-Client-Version': '0.1.0', // Matches package.json version
+    // Device ID is optional for web clients
+    // Could use localStorage to generate a persistent client ID if needed
+  }
+}
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
@@ -18,6 +30,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 
     return {
       Authorization: `Bearer ${token}`,
+      ...getClientHeaders(), // Include client identification headers
     }
   } catch (error) {
     console.error("Failed to get auth headers:", error)
@@ -101,6 +114,7 @@ export async function makeAuthenticatedRequest(
       const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...getClientHeaders(), // Include client identification headers
         ...options.headers,
       }
 
