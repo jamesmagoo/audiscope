@@ -1,7 +1,8 @@
 import type React from "react"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AuthGuard } from "@/components/providers/auth-guard"
+import { Separator } from "@/components/ui/separator"
 
 export default function DashboardLayout({
   children,
@@ -12,7 +13,13 @@ export default function DashboardLayout({
     <AuthGuard>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+          </header>
+          {children}
+        </SidebarInset>
       </SidebarProvider>
     </AuthGuard>
   )

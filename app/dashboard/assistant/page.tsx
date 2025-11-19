@@ -5,7 +5,6 @@ import { ChatsPanel } from "@/components/assistant/chats-panel"
 import { ChatInterface } from "@/components/assistant/chat-interface"
 import { KnowledgeBasePanel } from "@/components/assistant/knowledge-base-panel"
 import { Button } from "@/components/ui/button"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -60,11 +59,6 @@ export default function AssistantPage() {
           onClick={() => setLeftPanelOpen(false)}
         />
       )}
-
-      {/* Main Sidebar Trigger (Mobile) */}
-      <div className="absolute top-4 left-2 z-40 md:hidden">
-        <SidebarTrigger />
-      </div>
 
       {/* Left Panel Toggle Button */}
       <Button
