@@ -13,6 +13,7 @@ import {
   BookOpen,
   Settings,
   Search,
+  Plus,
 } from "lucide-react"
 
 import {
@@ -91,6 +92,12 @@ export function CommandMenu() {
             >
               <Upload className="mr-2 h-4 w-4" />
               <span>New Assessment</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/dashboard/products/create"))}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              <span>New Product</span>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/dashboard/cases"))}
