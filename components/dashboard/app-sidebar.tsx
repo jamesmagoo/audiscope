@@ -15,11 +15,9 @@ import {
   ClipboardCheck,
   TrendingUp
 } from "lucide-react"
-import { NavUser } from "@/components/dashboard/nav-user"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -87,9 +85,6 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
     </Sidebar>
   )
 }
