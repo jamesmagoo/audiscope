@@ -160,12 +160,7 @@ export async function sendMessage(
  */
 export async function listSessions(productId?: string, limit = 50, offset = 0): Promise<ListSessionsResult> {
   try {
-    const userId = await getCurrentUserId()
-    const organisationId = "a5c70880-0aae-4e44-9a6e-a38c0e9383e8" // TODO: Get from user context
-
     const url = new URL(`${ENDPOINT}/sessions`)
-    url.searchParams.append('user_id', userId)
-    url.searchParams.append('organisation_id', organisationId)
     url.searchParams.append('limit', limit.toString())
     url.searchParams.append('offset', offset.toString())
 

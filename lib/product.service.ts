@@ -126,11 +126,7 @@ export async function requestUploadURLs(
  * Step 2: Upload file directly to S3 using pre-signed URL
  * Returns upload progress via onProgress callback
  */
-export async function uploadToS3(
-  uploadURL: string,
-  file: File,
-  onProgress?: (percent: number) => void
-): Promise<void> {
+export async function uploadToS3( uploadURL: string, file: File, onProgress?: (percent: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
@@ -213,9 +209,7 @@ export async function uploadToS3(
 /**
  * Step 3: Create product with staged files
  */
-export async function createProduct(
-  data: CreateProductRequest
-): Promise<ProductResponse> {
+export async function createProduct( data: CreateProductRequest): Promise<ProductResponse> {
   try {
     console.log('createProduct: Creating product:', data.name)
 
@@ -258,11 +252,7 @@ export async function getProduct(id: string): Promise<ProductResponse> {
 /**
  * List all products
  */
-export async function listProducts(
-  status?: string,
-  limit = 50,
-  offset = 0
-): Promise<ProductResponse[]> {
+export async function listProducts( status?: string, limit = 50, offset = 0): Promise<ProductResponse[]> {
   try {
     const url = new URL(ENDPOINT)
     if (status) url.searchParams.append('status', status)

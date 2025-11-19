@@ -158,7 +158,7 @@ export function ProductDetails({ id }: ProductDetailsProps) {
   const isImageProcessing = imageStatus === 'pending' || imageStatus === 'processing'
   const isImageFailed = imageStatus === 'failed'
   const imageError = productImage
-    ? (productImage.processing_error || productImage.processingError || productImage.ProcessingError)
+    ? (productImage.processing_error)
     : null
 
   console.log('ProductDetails - Image Debug:', {

@@ -33,7 +33,7 @@ export function logJWTClaims(token: string) {
     console.log('📋 User ID (sub):', claims.sub)
     console.log('📧 Email:', claims.email)
     console.log('🏢 Organisation ID:', claims.organisation_id || claims['custom:organisation_id'] || 'NOT FOUND')
-    console.log('👤 Role:', claims.role || claims['custom:role'] || 'NOT FOUND')
+    console.log('👤 Roles:', claims.roles || claims['custom:roles'] || 'NOT FOUND')
     console.log('⏰ Expires:', claims.exp ? new Date(claims.exp * 1000).toLocaleString() : 'N/A')
     console.log('📅 Issued:', claims.iat ? new Date(claims.iat * 1000).toLocaleString() : 'N/A')
   }

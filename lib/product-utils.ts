@@ -16,6 +16,7 @@ export interface ProductFile {
   fileSize?: number
   FileSize?: number
   processing_status?: string
+  processing_error?: string
   processingStatus?: string
   ProcessingStatus?: string
   download_url?: string
