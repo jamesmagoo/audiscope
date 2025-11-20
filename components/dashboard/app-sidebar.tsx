@@ -5,12 +5,10 @@ import { usePathname } from "next/navigation"
 import {
   FileText,
   Home,
-  Upload,
   Users,
   BarChart3,
   BookOpen,
   Package,
-  MessageSquareText,
   GraduationCap,
   ClipboardCheck,
   TrendingUp
@@ -36,28 +34,29 @@ export function AppSidebar() {
   }
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Cases", href: "/dashboard/cases", icon: FileText },
-    { name: "Upload Assessment", href: "/dashboard/upload", icon: Upload },
-    { name: "Assistant", href: "/dashboard/assistant", icon: MessageSquareText},
     { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
+    { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: false },
+    { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: false },
+    { name: "NOTTS", href: "/dashboard", icon: Home, disabled: true },
+    { name: "Case Analysis", href: "/dashboard/cases", icon: FileText, disabled: true },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true },
-    { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true },
     { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true },
-    { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: true },
     { name: "Competency Tracking", href: "/dashboard/competency", icon: ClipboardCheck, disabled: true },
     { name: "Skill Development", href: "/dashboard/skills", icon: TrendingUp, disabled: true },
   ]
 
   return (
     <Sidebar variant="floating">
-      <SidebarHeader className="flex items-center justify-center py-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">A</span>
+      <SidebarHeader className="flex flex-col items-start py-4 px-4">
+        <Link href="/" className="flex items-center gap-3 w-full">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary flex-shrink-0">
+            <span className="text-3xl font-bold text-primary-foreground">📚</span>
           </div>
-          <span className="text-xl font-bold">AudiScope</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-lg font-bold leading-tight">Landy AI</span>
+            <span className="text-[10px] text-muted-foreground leading-tight">Learning & Development</span>
+          </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>

@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Package, Sparkles, MoreVertical, GraduationCap, BookOpen, MessageSquare } from 'lucide-react'
+import { Package, Sparkles, MoreVertical, GraduationCap, BookOpen, MessageSquare, Target, TrendingUp } from 'lucide-react'
 import { useStartSession } from '@/hooks/use-product-chat'
 
 interface ProductCardProps {
@@ -153,7 +153,19 @@ export function ProductCard({
                     disabled={isCreatingSession}
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
-                    Quiz Me
+                    Learn Concepts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/dashboard/training?product=${productId}`}>
+                      <Target className="h-4 w-4 mr-2" />
+                      Take Quiz
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/dashboard/learning?product=${productId}`}>
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      View Progress
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/dashboard/products/${productId}`}>

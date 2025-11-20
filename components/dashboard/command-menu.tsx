@@ -3,17 +3,13 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
-  FileText,
-  Home,
-  Upload,
   Package,
-  MessageSquareText,
   BarChart3,
   Users,
   BookOpen,
-  Settings,
-  Search,
   Plus,
+  GraduationCap,
+  Target,
 } from "lucide-react"
 
 import {
@@ -55,44 +51,26 @@ export function CommandMenu() {
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Navigation">
             <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard"))}
-            >
-              <Home className="mr-2 h-4 w-4" />
-              <span>Dashboard</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard/cases"))}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              <span>Cases</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard/upload"))}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              <span>Upload Assessment</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard/assistant"))}
-            >
-              <MessageSquareText className="mr-2 h-4 w-4" />
-              <span>Assistant</span>
-            </CommandItem>
-            <CommandItem
               onSelect={() => runCommand(() => router.push("/dashboard/products"))}
             >
               <Package className="mr-2 h-4 w-4" />
               <span>Product Library</span>
             </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/dashboard/training"))}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              <span>Training Programs</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/dashboard/learning"))}
+            >
+              <GraduationCap className="mr-2 h-4 w-4" />
+              <span>Learning Hub</span>
+            </CommandItem>
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="Quick Actions">
-            <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard/upload"))}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              <span>New Assessment</span>
-            </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/dashboard/products/create"))}
             >
@@ -100,10 +78,16 @@ export function CommandMenu() {
               <span>New Product</span>
             </CommandItem>
             <CommandItem
-              onSelect={() => runCommand(() => router.push("/dashboard/cases"))}
+              onSelect={() => runCommand(() => router.push("/dashboard/training"))}
             >
-              <Search className="mr-2 h-4 w-4" />
-              <span>Search Cases</span>
+              <Target className="mr-2 h-4 w-4" />
+              <span>Take a Quiz</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => runCommand(() => router.push("/dashboard/learning"))}
+            >
+              <GraduationCap className="mr-2 h-4 w-4" />
+              <span>Check Learning Progress</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
@@ -115,10 +99,6 @@ export function CommandMenu() {
             <CommandItem disabled>
               <Users className="mr-2 h-4 w-4" />
               <span>Team Management</span>
-            </CommandItem>
-            <CommandItem disabled>
-              <BookOpen className="mr-2 h-4 w-4" />
-              <span>Training Programs</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>

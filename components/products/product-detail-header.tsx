@@ -8,7 +8,9 @@ import {
   Package,
   Loader2,
   AlertCircle,
-  Edit
+  Edit,
+  Target,
+  TrendingUp
 } from 'lucide-react'
 import { getProductImage, getFileDownloadUrl } from '@/lib/product-utils'
 import { useProduct } from '@/hooks/use-products'
@@ -98,12 +100,26 @@ export function ProductDetailHeader({ id }: ProductDetailHeaderProps) {
         </div>
 
         {/* Actions - Right */}
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/dashboard/products/${productId}/edit`}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Link>
-        </Button>
+        <div className="flex gap-2 flex-shrink-0">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/training?product=${productId}`}>
+              <Target className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Quiz</span>
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/learning?product=${productId}`}>
+              <TrendingUp className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Progress</span>
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/products/${productId}/edit`}>
+              <Edit className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Edit</span>
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   )
