@@ -28,7 +28,7 @@ export function ProductChatTab({
   }
 
   return (
-    <div className="h-full min-h-0">
+    <div className="h-full min-h-0 pb-2">
       <Card className="h-full min-h-0">
         <CardContent className="p-0 h-full min-h-0">
           <div className="grid grid-cols-12 gap-0 h-full min-h-0">

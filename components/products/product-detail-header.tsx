@@ -57,7 +57,7 @@ export function ProductDetailHeader({ id }: ProductDetailHeaderProps) {
   const totalFiles = files.length
 
   return (
-    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex items-center gap-4 p-3 md:p-4">
         {/* Product Image */}
         <div className="flex-shrink-0 w-12 h-12 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center">
@@ -72,7 +72,9 @@ export function ProductDetailHeader({ id }: ProductDetailHeaderProps) {
           ) : isImageProcessing ? (
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : isImageFailed ? (
-            <AlertCircle className="h-5 w-5 text-destructive" title={imageError || 'Upload failed'} />
+            <span title={imageError || 'Upload failed'} aria-label={imageError || 'Upload failed'}>
+              <AlertCircle className="h-5 w-5 text-destructive" />
+            </span>
           ) : (
             <Package className="h-6 w-6 text-muted-foreground/40" />
           )}

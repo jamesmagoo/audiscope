@@ -119,9 +119,9 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
   }
 
   return (
-    <div className="flex flex-col h-full w-72 md:w-80 lg:w-96 flex-shrink-0 border-l bg-background max-w-[400px]">
+    <div className="flex flex-col h-[calc(100%-0.5rem)] w-72 md:w-80 lg:w-96 flex-shrink-0 border mx-2 rounded-lg bg-background max-w-[400px]">
       {/* Header */}
-      <div className="p-4 border-b bg-background space-y-3">
+      <div className="m-4 bg-background space-y-3">
         <div className="flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">Files & Sources</h2>
