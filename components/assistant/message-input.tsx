@@ -107,13 +107,13 @@ export function MessageInput({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-10 w-10 p-0 flex-shrink-0 self-end"
+            className="h-10 w-10 p-0 flex-shrink-0 self-end hidden"
             onClick={handleFileAttachment}
             disabled={disabled}
           >
             <Paperclip className="h-4 w-4" />
           </Button>
-          
+
           <input
             ref={fileInputRef}
             type="file"
@@ -149,9 +149,9 @@ export function MessageInput({
           <Button
             type="submit"
             size="sm"
+            variant="default"
             className={cn(
-              "h-10 w-10 p-0 flex-shrink-0 self-end transition-all",
-              canSend ? "bg-primary hover:bg-primary/90" : "bg-muted"
+              "h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
             )}
             disabled={!canSend}
           >

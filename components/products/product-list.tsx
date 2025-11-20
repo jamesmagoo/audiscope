@@ -1,13 +1,11 @@
 'use client'
 
-import Link from 'next/link'
-import Image from 'next/image'
 import { useProducts } from '@/hooks/use-products'
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Package } from 'lucide-react'
+import { Package, Sparkles, MessageSquare, BookOpen } from 'lucide-react'
 import { getProductImage, getFileDownloadUrl } from '@/lib/product-utils'
+import { ProductCard } from './product-card'
 
 interface ProductListProps {
   searchTerm?: string
@@ -48,12 +46,49 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
   if (productsArray.length === 0) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Package className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium">No products yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create your first product to get started
-          </p>
+        <CardContent className="flex flex-col items-center justify-center py-12 px-6">
+          <div className="max-w-md text-center space-y-6">
+            <div className="flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold">AI-Powered Product Training</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload product documentation and unlock AI-powered training, Q&A, and competitive insights
+              </p>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-3 text-left">
+                <MessageSquare className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Ask Questions</p>
+                  <p className="text-muted-foreground text-xs">Get instant answers from product documentation</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 text-left">
+                <BookOpen className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Practice & Learn</p>
+                  <p className="text-muted-foreground text-xs">Interactive demos and concept quizzes</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 text-left">
+                <Sparkles className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">AI Guidance</p>
+                  <p className="text-muted-foreground text-xs">Personalized training and insights</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground pt-2">
+              Click "Add Product" above to create your first product
+            </p>
+          </div>
         </CardContent>
       </Card>
     )
@@ -102,54 +137,17 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
         const imageUrl = productImage ? getFileDownloadUrl(productImage) : null
 
         return (
-          <Link key={productId} href={`/dashboard/products/${productId}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer mb-2">
-              <div className="flex items-start p-6 gap-4">
-                {/* Product Image Thumbnail */}
-                <div className="flex-shrink-0 w-20 h-20 rounded-lg border overflow-hidden bg-muted/20 flex items-center justify-center">
-                  {imageUrl ? (
-                    <Image
-                      src={imageUrl}
-                      alt={name}
-                      width={80}
-                      height={80}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <Package className="h-10 w-10 text-muted-foreground/40" />
-                  )}
-                </div>
-
-                {/* Product Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <CardTitle className="text-lg">{name}</CardTitle>
-                      <CardDescription>
-                        {manufacturer} • Model: {modelNumber}
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="flex-shrink-0">{category}</Badge>
-                  </div>
-
-                  {description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {description}
-                    </p>
-                  )}
-
-                  {totalFiles > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">
-                        {totalFiles} file{totalFiles !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </Link>
+          <ProductCard
+            key={productId}
+            productId={productId}
+            name={name}
+            manufacturer={manufacturer}
+            modelNumber={modelNumber}
+            category={category}
+            description={description}
+            imageUrl={imageUrl}
+            totalFiles={totalFiles}
+          />
         )
       })}
     </div>
