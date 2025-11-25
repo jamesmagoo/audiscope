@@ -24,15 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-      <QueryProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
-          <AuthProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
+        <AuthProvider>
+          <QueryProvider>
             {children}
             <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
-          <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
-      </QueryProvider>
+            <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+          </QueryProvider>
+        </AuthProvider>
+      </ThemeProvider>
       </body>
     </html>
   )

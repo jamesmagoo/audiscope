@@ -1,5 +1,6 @@
 import { fetchAuthSession } from "aws-amplify/auth"
 import { logJWTClaims } from "./jwt-debug"
+import { AuthenticationError } from "./auth-error"
 
 export interface ApiError extends Error {
   status?: number
@@ -25,7 +26,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     const token = session.tokens?.accessToken?.toString()
 
     if (!token) {
-      throw new Error("No access token available")
+      throw new AuthenticationError("No access token available")
     }
 
     return {
@@ -34,7 +35,11 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
     }
   } catch (error) {
     console.error("Failed to get auth headers:", error)
-    throw error
+    // Re-throw as AuthenticationError if it's not already one
+    if (error instanceof AuthenticationError) {
+      throw error
+    }
+    throw new AuthenticationError("Failed to get authentication headers", undefined, error as Error)
   }
 }
 
@@ -44,13 +49,17 @@ export async function getCurrentUserId(): Promise<string> {
     const userId = session.tokens?.accessToken?.payload?.sub as string
 
     if (!userId) {
-      throw new Error("No user ID available in token")
+      throw new AuthenticationError("No user ID available in token")
     }
 
     return userId
   } catch (error) {
     console.error("Failed to get user ID:", error)
-    throw error
+    // Re-throw as AuthenticationError if it's not already one
+    if (error instanceof AuthenticationError) {
+      throw error
+    }
+    throw new AuthenticationError("Failed to get user ID from token", undefined, error as Error)
   }
 }
 
@@ -106,9 +115,9 @@ export async function makeAuthenticatedRequest(
       // Get fresh token if forceRefresh is true
       const session = await fetchAuthSession(forceRefresh ? { forceRefresh: true } : undefined)
       const token = session.tokens?.accessToken?.toString()
-      
+
       if (!token) {
-        throw new Error('No access token available')
+        throw new AuthenticationError('No access token available')
       }
 
       const headers = {
@@ -126,6 +135,10 @@ export async function makeAuthenticatedRequest(
       return response
     } catch (error) {
       console.error('Request failed:', error)
+      // Re-throw AuthenticationError as-is
+      if (error instanceof AuthenticationError) {
+        throw error
+      }
       throw error
     }
   }
@@ -133,12 +146,12 @@ export async function makeAuthenticatedRequest(
   try {
     // First attempt with current token
     const response = await makeRequest()
-    
+
     // If we get 401/403, try refreshing the token once
     const headers = options.headers as Record<string, string> || {}
     if ((response.status === 401 || response.status === 403) && !headers['X-Retry-Count']) {
       console.log('Auth error, attempting token refresh...')
-      
+
       const retryOptions = {
         ...options,
         headers: {
@@ -146,19 +159,50 @@ export async function makeAuthenticatedRequest(
           'X-Retry-Count': '1'
         }
       }
-      
-      return await makeRequest(true)
+
+      // Try refreshing the token
+      const retryResponse = await makeRequest(true)
+
+      // If we still get 401/403 after token refresh, the session is truly invalid
+      if (retryResponse.status === 401 || retryResponse.status === 403) {
+        console.error('Authentication failed after token refresh - session expired')
+        throw new AuthenticationError(
+          'Session expired. Please sign in again.',
+          retryResponse.status
+        )
+      }
+
+      return retryResponse
     }
-    
+
+    // If we got 401/403 on first try and already retried, throw auth error
+    if ((response.status === 401 || response.status === 403) && headers['X-Retry-Count']) {
+      throw new AuthenticationError(
+        'Session expired. Please sign in again.',
+        response.status
+      )
+    }
+
     return response
   } catch (error) {
+    // Re-throw AuthenticationError as-is
+    if (error instanceof AuthenticationError) {
+      console.error('Authentication failed, user needs to log in again')
+      throw error
+    }
+
     const apiError = error as ApiError
-    
-    // If it's an auth error, we might want to redirect to login
+
+    // Check if it's an auth-related error even if not explicitly AuthenticationError
     if (apiError.message?.includes('token') || apiError.message?.includes('auth')) {
       console.error('Authentication failed, user may need to log in again')
+      throw new AuthenticationError(
+        'Authentication failed. Please sign in again.',
+        apiError.status,
+        error as Error
+      )
     }
-    
+
     throw error
   }
 }
@@ -169,7 +213,7 @@ export async function makeAuthenticatedRequest(
 export async function handleApiResponse(response: Response): Promise<any> {
   if (!response.ok) {
     let errorMessage = `API Error: ${response.status}`
-    
+
     try {
       const errorData = await response.json()
       errorMessage = errorData.error || errorData.message || errorMessage
@@ -182,12 +226,20 @@ export async function handleApiResponse(response: Response): Promise<any> {
         // Use the default error message
       }
     }
-    
+
+    // Throw AuthenticationError for auth-related status codes
+    if (response.status === 401 || response.status === 403) {
+      throw new AuthenticationError(
+        errorMessage || 'Session expired. Please sign in again.',
+        response.status
+      )
+    }
+
     const error = new Error(errorMessage) as ApiError
     error.status = response.status
     error.statusText = response.statusText
     throw error
   }
-  
+
   return response.json()
 }

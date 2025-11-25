@@ -95,7 +95,7 @@ function LoginForm() {
         setStep('newPassword')
         setErrors({})
       } else if (result.isSignedIn) {
-        router.push('/dashboard')
+        router.push('/dashboard/products')
       }
     } catch (error: any) {
       setErrors({ general: error.message || 'Failed to sign in' })
@@ -111,7 +111,7 @@ function LoginForm() {
 
     try {
       await completeNewPassword(newPassword)
-      router.push('/dashboard')
+      router.push('/dashboard/products')
     } catch (error: any) {
       setErrors({ general: error.message || 'Failed to set new password' })
     }
