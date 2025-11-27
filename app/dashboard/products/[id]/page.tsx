@@ -45,9 +45,9 @@ export default function ProductPage({ params }: ProductPageProps) {
       </div>
 
       {/* Content area with sidebar below header - takes remaining height */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Main content */}
-        <div className="flex-1 min-w-0 overflow-hidden relative min-h-0">
+        <div className="flex-1 min-w-0 overflow-hidden relative min-h-0 flex-shrink">
           {/* Floating trigger button */}
           <div className="absolute top-4 right-4 z-10">
             <TooltipProvider>

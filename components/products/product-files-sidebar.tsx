@@ -26,6 +26,7 @@ import {
   FolderOpen,
 } from 'lucide-react'
 import { getFileDownloadUrl } from '@/lib/product-utils'
+import { AddFilesDialog } from './add-files-dialog'
 
 interface ProductFilesSidebarProps {
   files: any[]
@@ -105,6 +106,7 @@ const formatFileSize = (bytes: number): string => {
 
 export function ProductFilesSidebar({ files, productId, onUploadClick }: ProductFilesSidebarProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set())
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const toggleFileExpansion = (fileId: string) => {
     setExpandedFiles(prev => {
@@ -118,37 +120,42 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
     })
   }
 
+  const handleUploadClick = () => {
+    setIsDialogOpen(true)
+    onUploadClick?.()
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100%-0.5rem)] w-72 md:w-80 lg:w-96 flex-shrink-0 border mx-2 rounded-lg bg-background max-w-[400px]">
+    <div className="flex flex-col h-[calc(100%-0.5rem)] w-64 md:w-72 lg:w-80 flex-shrink-0 border mx-2 rounded-lg bg-background max-w-[320px] overflow-hidden">
       {/* Header */}
-      <div className="m-4 bg-background space-y-3">
+      <div className="m-3 bg-background space-y-2">
         <div className="flex items-center gap-2">
-          <FolderOpen className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Files & Sources</h2>
+          <FolderOpen className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Files & Sources</h2>
           {files.length > 0 && (
-            <Badge variant="secondary" className="ml-auto">
+            <Badge variant="secondary" className="ml-auto text-xs">
               {files.length}
             </Badge>
           )}
         </div>
         <Button
           variant="outline"
-          className="w-full"
-          onClick={onUploadClick}
+          className="w-full text-xs h-8"
+          onClick={handleUploadClick}
         >
-          <Upload className="h-4 w-4 mr-2" />
+          <Upload className="h-3.5 w-3.5 mr-2" />
           Upload Files
         </Button>
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
-        <div className="p-2">
+      <ScrollArea className="flex-1 w-full">
+        <div className="p-2 pr-3">
           {files.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">No files uploaded yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="flex flex-col items-center justify-center py-8 px-3 text-center">
+              <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-xs text-muted-foreground">No files uploaded yet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Upload files to get started
               </p>
             </div>
@@ -169,25 +176,25 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
               const isExpanded = expandedFiles.has(fileId)
 
               return (
-                <div key={fileId} className="mb-2">
+                <div key={fileId} className="mb-1.5">
                   <Collapsible open={isExpanded} onOpenChange={() => toggleFileExpansion(fileId)}>
                     <CollapsibleTrigger asChild>
-                      <button className="w-full rounded-md hover:bg-accent p-3 transition-colors">
-                        <div className="flex items-start gap-3 w-full">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <FileIcon className="h-5 w-5 text-primary" />
+                      <button className="w-full rounded-md hover:bg-accent p-2 transition-colors overflow-hidden">
+                        <div className="flex items-start gap-2 w-full">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                            <FileIcon className="h-4 w-4 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0 text-left">
-                            <p className="text-sm font-medium truncate">{fileName}</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <StatusIcon className={`h-3 w-3 ${statusDisplay.color}`} />
-                              <span className={`text-xs ${statusDisplay.color}`}>
+                            <p className="text-xs font-medium truncate max-w-full">{fileName}</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <StatusIcon className={`h-2.5 w-2.5 ${statusDisplay.color}`} />
+                              <span className={`text-[10px] ${statusDisplay.color}`}>
                                 {statusDisplay.label}
                               </span>
                             </div>
                           </div>
                           <ChevronDown
-                            className={`h-4 w-4 transition-transform flex-shrink-0 ${
+                            className={`h-3.5 w-3.5 transition-transform flex-shrink-0 ${
                               isExpanded ? 'rotate-180' : ''
                             }`}
                           />
@@ -195,37 +202,37 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
                       </button>
                     </CollapsibleTrigger>
 
-                    <CollapsibleContent className="px-3 pb-3">
-                      <div className="mt-2 space-y-3 text-sm border-t pt-3">
+                    <CollapsibleContent className="px-2 pb-2">
+                      <div className="mt-1.5 space-y-2 border-t pt-2">
                         {/* File Details */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <div>
-                            <span className="text-xs text-muted-foreground">Type</span>
-                            <p className="text-xs font-medium">{fileTypeLabel}</p>
+                            <span className="text-[10px] text-muted-foreground">Type</span>
+                            <p className="text-xs font-medium truncate">{fileTypeLabel}</p>
                           </div>
                           <div>
-                            <span className="text-xs text-muted-foreground">Size</span>
+                            <span className="text-[10px] text-muted-foreground">Size</span>
                             <p className="text-xs font-medium">{formatFileSize(fileSize)}</p>
                           </div>
                           <div>
-                            <span className="text-xs text-muted-foreground">File ID</span>
-                            <p className="text-xs font-mono">{fileId.slice(0, 12)}...</p>
+                            <span className="text-[10px] text-muted-foreground">File ID</span>
+                            <p className="text-xs font-mono truncate max-w-full">{fileId.slice(0, 16)}...</p>
                           </div>
                         </div>
 
                         {/* Processing Indicator */}
                         {(fileStatus === 'processing' || fileStatus === 'pending') && (
                           <div>
-                            <Progress value={fileStatus === 'processing' ? 50 : 10} className="h-1.5" />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {fileStatus === 'processing' ? 'Processing file...' : 'Waiting to process...'}
+                            <Progress value={fileStatus === 'processing' ? 50 : 10} className="h-1" />
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              {fileStatus === 'processing' ? 'Processing...' : 'Waiting...'}
                             </p>
                           </div>
                         )}
 
                         {/* Processing Error */}
                         {fileStatus === 'failed' && processingError && (
-                          <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
+                          <div className="p-1.5 bg-destructive/10 border border-destructive/20 rounded text-[10px] text-destructive">
                             Error: {processingError}
                           </div>
                         )}
@@ -235,11 +242,11 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full"
+                            className="w-full h-7 text-xs"
                             asChild
                           >
                             <a href={downloadUrl} download={fileName} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-3.5 w-3.5 mr-2" />
+                              <Download className="h-3 w-3 mr-1.5" />
                               Download
                             </a>
                           </Button>
@@ -253,6 +260,14 @@ export function ProductFilesSidebar({ files, productId, onUploadClick }: Product
           )}
         </div>
       </ScrollArea>
+
+      {/* Add Files Dialog */}
+      <AddFilesDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        productId={productId}
+        currentFileCount={files.length}
+      />
     </div>
   )
 }

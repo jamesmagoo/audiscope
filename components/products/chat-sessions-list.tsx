@@ -140,20 +140,20 @@ export function ChatSessionsList({
     <>
       <div className="flex flex-col h-full min-h-0">
         {/* Header */}
-        <div className="p-4 border-b flex-shrink-0">
+        <div className="p-3 border-b flex-shrink-0">
           <Button
             onClick={() => setShowNewSessionDialog(true)}
-            className="w-full"
+            className="w-full h-8 text-xs"
             disabled={startSession.isPending}
           >
             {startSession.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 Creating...
               </>
             ) : (
               <>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
                 New Chat
               </>
             )}
@@ -164,18 +164,18 @@ export function ChatSessionsList({
         <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div className="p-2 space-y-1">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : error ? (
-            <div className="p-4 text-center">
-              <p className="text-sm text-destructive">Error loading sessions</p>
+            <div className="p-3 text-center">
+              <p className="text-xs text-destructive">Error loading sessions</p>
             </div>
           ) : sessions.length === 0 ? (
-            <div className="p-4 text-center">
-              <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No chats yet</p>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="p-3 text-center">
+              <MessageSquare className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">No chats yet</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
                 Click "New Chat" to start
               </p>
             </div>
@@ -189,46 +189,46 @@ export function ChatSessionsList({
                 <div
                   key={session.session_id}
                   className={cn(
-                    'group relative flex items-start gap-3 rounded-lg p-3 cursor-pointer transition-colors',
+                    'group relative flex items-start gap-2 rounded-md p-2 cursor-pointer transition-colors',
                     isActive
                       ? 'bg-primary/10 border border-primary/20'
                       : 'hover:bg-muted'
                   )}
                   onClick={() => onSelectSession(session.session_id)}
                 >
-                  <div className={cn('flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center', typeConfig?.bgColor)}>
-                    <Icon className={cn('h-4 w-4', typeConfig?.color)} />
+                  <div className={cn('flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center', typeConfig?.bgColor)}>
+                    <Icon className={cn('h-3.5 w-3.5', typeConfig?.color)} />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-sm font-medium truncate">{session.title}</h4>
+                    <div className="flex items-start justify-between gap-1">
+                      <h4 className="text-xs font-medium truncate">{session.title}</h4>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSessionToDelete(session.session_id)
                         }}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-2.5 w-2.5" />
                       </Button>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
                         {typeConfig?.label || session.session_type}
                       </Badge>
                       {session.message_count !== undefined && session.message_count > 0 && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] text-muted-foreground">
                           {session.message_count} msgs
                         </span>
                       )}
                     </div>
 
                     {session.last_message_at && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {formatDate(session.last_message_at)}
                       </p>
                     )}
