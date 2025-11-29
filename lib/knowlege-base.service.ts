@@ -1,7 +1,7 @@
 import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from './api-utils'
 
-// Use localhost API in development, AWS in production
-const API_BASE = process.env.NODE_ENV === 'development' ? 'http://localhost:5002/api' : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
+// Use NEXT_PUBLIC_CORE_API_URL if set, otherwise fallback to localhost
+const API_BASE = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api';
 const API_PATH = '/v1/knowledge-base';
 const ENDPOINT = API_BASE + API_PATH
 

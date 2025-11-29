@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "dotenv -e .env.dev-cloud -- next dev",
+    "local": "dotenv -e .env.development -- next dev",
+    "staging": "dotenv -e .env.staging -- next dev",
     "lint": "next lint",
     "start": "next start",
     "typecheck": "tsc --noEmit"
@@ -69,6 +71,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^7.4.2",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

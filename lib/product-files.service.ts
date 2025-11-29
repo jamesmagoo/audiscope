@@ -13,9 +13,8 @@ import { makeAuthenticatedRequest, handleApiResponse } from './api-utils'
 // API Configuration
 // ============================================================================
 
-const CORE_API_BASE = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:5002/api'
-  : process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api'
+// Use NEXT_PUBLIC_CORE_API_URL if set, otherwise fallback to localhost
+const CORE_API_BASE = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api'
 
 // ============================================================================
 // TypeScript Interfaces

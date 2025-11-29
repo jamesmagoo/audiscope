@@ -5,7 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 Development commands:
-- `pnpm dev` - Start development server
+- `pnpm dev` - Start development server with cloud resources (.env.dev-cloud)
+- `pnpm local` - Start development server with LocalStack (.env.development)
+- `pnpm staging` - Start development server with staging environment (.env.staging)
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint
@@ -79,27 +81,215 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 
 ## Environment Setup
 
+AudiScope supports multiple environment configurations for different development and deployment scenarios.
+
+### Environment Profiles
+
+The project includes four environment configuration files:
+
+1. **`.env.dev-cloud`** - Development with all real AWS resources (recommended)
+2. **`.env.development`** - Local development with LocalStack (S3 emulation)
+3. **`.env.staging`** - Staging environment configuration
+4. **`.env.example`** - Template with all available environment variables
+
+### Quick Start
+
+**For Development with All Cloud Resources (Recommended):**
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Start development server (uses .env.dev-cloud automatically)
+pnpm dev
+```
+
+This configuration uses:
+- Real AWS Cognito for authentication
+- Real AWS API Gateway for audio assessments
+- Real Core API on AWS ALB (dev environment)
+- Real AWS S3 for file storage
+- Real AWS Bedrock Knowledge Base
+
+**For Local Development with LocalStack:**
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Install and start LocalStack (for local S3 testing)
+pip install localstack
+localstack start
+
+# 3. Start your backend service (Core API on http://localhost:5002)
+# (Use your backend's start command)
+
+# 4. Start development server (uses .env.development automatically)
+pnpm local
+```
+
 ### Required Environment Variables
 
-Create a `.env.local` file in the root directory with:
+#### AWS Cognito Authentication
+```bash
+NEXT_PUBLIC_AWS_REGION=eu-west-1
+NEXT_PUBLIC_USER_POOL_ID=your-user-pool-id
+NEXT_PUBLIC_USER_POOL_CLIENT_ID=your-client-id
+```
 
-\`\`\`bash
-NEXT_PUBLIC_API_GATEWAY_URL=your-aws-api-gateway-url
-\`\`\`
+#### Backend APIs (Dual Backend Architecture)
+
+**Backend 1: AWS API Gateway (Audio Assessment Pipeline)**
+```bash
+# Deployed AWS service for audio transcription and analysis
+NEXT_PUBLIC_API_GATEWAY_URL=https://your-gateway.execute-api.region.amazonaws.com
+```
+
+**Backend 2: Core API (Product Management)**
+```bash
+# Local development
+NEXT_PUBLIC_API_URL=http://localhost:5002
+NEXT_PUBLIC_CORE_API_URL=http://localhost:5002/api
+
+# Production/Staging
+NEXT_PUBLIC_API_URL=https://api.example.com
+NEXT_PUBLIC_CORE_API_URL=https://api.example.com/api
+```
+
+#### AWS Bedrock Knowledge Base
+```bash
+NEXT_PUBLIC_KNOWLEDGE_BASE_ID=your-knowledge-base-id
+```
+
+#### S3 Configuration (LocalStack Support)
+```bash
+# Optional: Enable LocalStack for local S3 testing
+# When set, uses LocalStack instead of real AWS S3
+NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE=http://localhost:4566
+
+# For real AWS S3: Leave this unset or remove it
+```
+
+#### Sentry (Optional)
+```bash
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+SENTRY_AUTH_TOKEN=your-auth-token
+SENTRY_ORG=your-org
+SENTRY_PROJECT=your-project
+```
+
+### LocalStack Setup (Local S3 Emulation)
+
+LocalStack allows you to test S3 file uploads locally without using AWS resources:
+
+```bash
+# Install LocalStack
+pip install localstack
+
+# Start LocalStack
+localstack start
+
+# Verify it's running
+aws --endpoint-url=http://localhost:4566 s3 ls
+
+# In .env.local, set:
+NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE=http://localhost:4566
+```
+
+**Features:**
+- No AWS costs during development
+- Faster iteration (no network latency)
+- Works offline
+- Automatic URL transformation in `lib/product-files.service.ts`
+
+**Switching to Real AWS S3:**
+1. Comment out or remove `NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE` from `.env.local`
+2. Ensure your backend is configured with real S3 bucket names
+3. Restart the development server
 
 ### AWS Configuration
 
-This application requires:
-- AWS API Gateway endpoint for backend communication
-- S3 bucket access for audio file storage (configured through backend)
-- Proper CORS settings for presigned URL uploads
+This application requires the following AWS services:
 
-### First-time Setup
+**Deployed Services (Already Configured):**
+- **AWS Cognito** - User authentication and JWT tokens
+- **AWS API Gateway** - Audio assessment pipeline (Lambda backend)
+- **AWS Bedrock** - Knowledge base for AI-powered document search
 
-1. Install dependencies: `pnpm install`
-2. Set up environment variables in `.env.local`
-3. Start development server: `pnpm dev`
-4. Verify API connectivity through the upload functionality
+**Backend-Managed Services:**
+- **AWS S3** - File storage (accessed via presigned URLs from backend)
+  - Staging bucket for temporary uploads
+  - Main bucket for processed files
+  - CORS configuration for browser uploads
+  - Lifecycle policies for automatic cleanup
+
+**CORS Requirements:**
+All S3 buckets must be configured to allow:
+- PUT requests from your frontend domain
+- Appropriate headers for file uploads
+- Presigned URL authentication
+
+### Environment Switching
+
+Environment switching is now handled automatically via npm scripts:
+
+**Dev-Cloud (All Cloud Resources):**
+```bash
+pnpm dev
+```
+
+**LocalStack (Local Development):**
+```bash
+pnpm local
+```
+
+**Staging Environment:**
+```bash
+pnpm staging
+```
+
+No need to manually copy `.env` files - each command uses its corresponding environment file automatically.
+
+**Verify Current Environment:**
+Check your browser console on app load. The application logs will show:
+- Which API endpoints are being used
+- Whether LocalStack URL transformation is active
+- Authentication status
+
+### Troubleshooting
+
+**"API endpoint not configured" error:**
+- Check that `NEXT_PUBLIC_API_GATEWAY_URL` is set in `.env.local`
+- Restart the development server after changing environment variables
+
+**File upload fails:**
+- If using LocalStack: Ensure LocalStack is running (`localstack status`)
+- If using AWS S3: Check backend is generating valid presigned URLs
+- Verify CORS configuration on S3 buckets
+- Check browser console for detailed error messages
+
+**Authentication errors (401/403):**
+- Verify Cognito credentials in `.env.local`
+- Check that user pool and client ID are correct
+- Clear browser localStorage and try logging in again
+
+**Backend connection errors:**
+- Core API: Ensure backend is running on expected port (default: 5002)
+- API Gateway: Verify the endpoint URL is correct and accessible
+- Check network tab in browser DevTools for failed requests
+
+### First-time Setup Checklist
+
+- [ ] Install dependencies: `pnpm install`
+- [ ] Choose your environment and run the corresponding command:
+  - `pnpm dev` - All cloud resources (recommended)
+  - `pnpm local` - LocalStack with local backend
+  - `pnpm staging` - Staging environment
+- [ ] If using LocalStack (`pnpm local`): Install and start LocalStack first
+- [ ] If using dev-cloud (`pnpm dev`): Verify backend ALB is accessible
+- [ ] Test authentication (login/signup)
+- [ ] Verify file upload functionality
+- [ ] Check browser console for any errors
 
 ## Code Quality & Development Tools
 
