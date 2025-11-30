@@ -40,7 +40,7 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "latest",
-    "@sentry/nextjs": "^10.26.0",
+    "@sentry/nextjs": "^10.27.0",
     "@tanstack/react-query": "latest",
     "@tanstack/react-query-devtools": "latest",
     "autoprefixer": "^10.4.20",
