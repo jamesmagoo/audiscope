@@ -19,14 +19,14 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [confirmationCode, setConfirmationCode] = useState('')
   const [step, setStep] = useState<'signup' | 'confirm'>('signup')
-  const [errors, setErrors] = useState<{ 
-    email?: string; 
-    password?: string; 
-    confirmPassword?: string; 
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
     confirmationCode?: string;
-    general?: string 
+    general?: string
   }>({})
-  const { signUpUser, confirmSignUpUser, resendConfirmationCode, loading } = useAuth()
+  const { signUpUser, confirmSignUpUser, resendConfirmationCode, isOperationLoading } = useAuth()
   const router = useRouter()
 
   const validateSignupForm = () => {
@@ -263,9 +263,9 @@ export default function SignupPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={isOperationLoading}
                 >
-                  {loading ? (
+                  {isOperationLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating account...
@@ -302,9 +302,9 @@ export default function SignupPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={isOperationLoading}
                 >
-                  {loading ? (
+                  {isOperationLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Confirming...
@@ -322,7 +322,7 @@ export default function SignupPage() {
                     type="button"
                     variant="link"
                     onClick={handleResendCode}
-                    disabled={loading}
+                    disabled={isOperationLoading}
                   >
                     Resend confirmation code
                   </Button>

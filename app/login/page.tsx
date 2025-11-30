@@ -29,7 +29,8 @@ function LoginForm() {
     general?: string
   }>({})
   const [successMessage, setSuccessMessage] = useState('')
-  const { signInUser, completeNewPassword, loading } = useAuth()
+  const auth = useAuth()
+  const { signInUser, completeNewPassword, signOutUser, isOperationLoading, user } = auth
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -39,6 +40,13 @@ function LoginForm() {
       setSuccessMessage(message)
     }
   }, [searchParams])
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user && !auth.loading) {
+      router.push('/dashboard/products')
+    }
+  }, [user, auth.loading, router])
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
@@ -88,6 +96,11 @@ function LoginForm() {
     }
 
     try {
+      // If there's already a user signed in, sign them out first
+      if (user) {
+        await signOutUser()
+      }
+
       const result = await signInUser(email, password)
 
       // Check if user needs to complete new password challenge
@@ -221,9 +234,9 @@ function LoginForm() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={isOperationLoading}
               >
-                {loading ? (
+                {isOperationLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
@@ -306,9 +319,9 @@ function LoginForm() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={isOperationLoading}
                 >
-                  {loading ? (
+                  {isOperationLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Setting password...

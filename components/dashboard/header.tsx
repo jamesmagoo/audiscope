@@ -16,14 +16,7 @@ export function DashboardHeader({ title, description, action }: DashboardHeaderP
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         {description && <p className="text-muted-foreground">{description}</p>}
       </div>
-      {action || (
-        <Button asChild>
-          <Link href="/dashboard/upload">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Assessment
-          </Link>
-        </Button>
-      )}
+      {action}
     </div>
   )
 }

@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; general?: string }>({})
-  const { forgotPassword, loading } = useAuth()
+  const { forgotPassword, isOperationLoading } = useAuth()
   const router = useRouter()
 
   const validateForm = () => {
@@ -126,9 +126,9 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={isOperationLoading}
                 >
-                  {loading ? (
+                  {isOperationLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Sending reset code...

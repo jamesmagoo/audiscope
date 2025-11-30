@@ -27,8 +27,8 @@ function ResetPasswordForm() {
     confirmPassword?: string
     general?: string
   }>({})
-  
-  const { confirmForgotPassword, loading } = useAuth()
+
+  const { confirmForgotPassword, isOperationLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -281,9 +281,9 @@ function ResetPasswordForm() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={loading}
+                  disabled={isOperationLoading}
                 >
-                  {loading ? (
+                  {isOperationLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Resetting password...

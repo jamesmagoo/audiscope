@@ -14,7 +14,7 @@ import { Fragment } from "react"
 
 // Route label mapping for readable breadcrumbs
 const routeLabels: Record<string, string> = {
-  dashboard: "NOTTS",
+  dashboard: "Home",
   cases: "Case Analysis",
   products: "Product Library",
   training: "Training Programs",
@@ -38,7 +38,7 @@ export function Breadcrumbs() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>NOTTS</BreadcrumbPage>
+            <BreadcrumbPage>Home</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

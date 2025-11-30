@@ -36,6 +36,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
+  isOperationLoading: boolean
   error: string | null
   signInUser: (username: string, password: string) => Promise<SignInOutput>
   signUpUser: (username: string, password: string, email: string) => Promise<void>
@@ -60,6 +61,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isOperationLoading, setIsOperationLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInUser = async (username: string, password: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       const result = await signIn({ username, password })
       if (result.isSignedIn) {
@@ -110,13 +112,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(error.message || "Failed to sign in")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const signUpUser = async (username: string, password: string, email: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await signUp({
         username,
@@ -127,13 +129,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(error.message || "Failed to sign up")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const signOutUser = async () => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await signOut()
       setUser(null)
@@ -143,65 +145,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(error.message || "Failed to sign out")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const confirmSignUpUser = async (username: string, code: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await confirmSignUp({ username, confirmationCode: code })
     } catch (error: any) {
       setError(error.message || "Failed to confirm sign up")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const resendConfirmationCode = async (username: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await resendSignUpCode({ username })
     } catch (error: any) {
       setError(error.message || "Failed to resend confirmation code")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const forgotPassword = async (username: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await resetPassword({ username })
     } catch (error: any) {
       setError(error.message || "Failed to initiate password reset")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const confirmForgotPassword = async (username: string, code: string, newPassword: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       await confirmResetPassword({ username, confirmationCode: code, newPassword })
     } catch (error: any) {
       setError(error.message || "Failed to reset password")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const completeNewPassword = async (newPassword: string) => {
     try {
-      setLoading(true)
+      setIsOperationLoading(true)
       setError(null)
       const result = await confirmSignIn({ challengeResponse: newPassword })
       if (result.isSignedIn) {
@@ -211,13 +213,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(error.message || "Failed to set new password")
       throw error
     } finally {
-      setLoading(false)
+      setIsOperationLoading(false)
     }
   }
 
   const value = {
     user,
     loading,
+    isOperationLoading,
     error,
     signInUser,
     signUpUser,
