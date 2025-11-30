@@ -11,10 +11,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { FileAudio, Check, AlertCircle } from "lucide-react"
-import apiClient, { type FileUploadResponse, type AssessmentData } from "@/lib/aws-api.service"
+import { apiClient, type FileUploadResponse, type AssessmentData } from "@/lib/audio-pipeline-api.service"
 import { useToast } from "@/hooks/use-toast"
 
 // Define the validation schema with Zod
@@ -101,9 +100,12 @@ export function UploadAssessment() {
     } catch (error) {
       console.error("Error submitting form:", error)
       toast({
-        variant: "destructive", 
+        variant: "destructive",
         title: "Submission Failed",
-        description: error instanceof Error ? error.message : "An error occurred while submitting the assessment. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while submitting the assessment. Please try again.",
       })
     } finally {
       setIsSubmitting(false)
@@ -174,7 +176,7 @@ export function UploadAssessment() {
           const xhr = new XMLHttpRequest()
 
           // Track upload progress
-          xhr.upload.addEventListener('progress', (event) => {
+          xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
               const percentComplete = Math.round((event.loaded / event.total) * 100)
               setProgress(percentComplete)
@@ -182,7 +184,7 @@ export function UploadAssessment() {
           })
 
           // Handle successful upload
-          xhr.addEventListener('load', () => {
+          xhr.addEventListener("load", () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               setProgress(100)
               resolve()
@@ -192,18 +194,18 @@ export function UploadAssessment() {
           })
 
           // Handle network errors
-          xhr.addEventListener('error', () => {
-            reject(new Error('Network error during upload'))
+          xhr.addEventListener("error", () => {
+            reject(new Error("Network error during upload"))
           })
 
           // Handle timeouts
-          xhr.addEventListener('timeout', () => {
-            reject(new Error('Upload timed out'))
+          xhr.addEventListener("timeout", () => {
+            reject(new Error("Upload timed out"))
           })
 
           // Configure request
-          xhr.open('PUT', presignedData.uploadUrl)
-          xhr.setRequestHeader('Content-Type', file.type)
+          xhr.open("PUT", presignedData.uploadUrl)
+          xhr.setRequestHeader("Content-Type", file.type)
           xhr.timeout = 300000 // 5 minutes timeout for large files
 
           // Start upload
@@ -232,31 +234,32 @@ export function UploadAssessment() {
               <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center">
                 <FileAudio className="h-10 w-10 text-muted-foreground mb-2" />
                 {!isAudioUploaded && (
-                <div className="space-y-1 text-center">
-                  <p className="text-sm text-muted-foreground">Upload an audio recording of the surgical procedure</p>
-                  <div className="flex justify-center text-sm">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      disabled={uploading || (success && isAudioUploaded)}
-                    >
-                      Upload a file
-                    </button>
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      className="sr-only"
-                      accept="audio/*"
-                      onChange={handleFileChange}
-                      ref={fileInputRef}
-                      disabled={uploading || (success && isAudioUploaded)}
-                    />
-                    <p className="pl-1 text-muted-foreground">or drag and drop</p>
+                  <div className="space-y-1 text-center">
+                    <p className="text-sm text-muted-foreground">Upload an audio recording of the surgical procedure</p>
+                    <div className="flex justify-center text-sm">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        disabled={uploading || (success && isAudioUploaded)}
+                      >
+                        Upload a file
+                      </button>
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="audio/*"
+                        onChange={handleFileChange}
+                        ref={fileInputRef}
+                        disabled={uploading || (success && isAudioUploaded)}
+                      />
+                      <p className="pl-1 text-muted-foreground">or drag and drop</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">MP3, WAV, M4A up to 500MB</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">MP3, WAV, M4A up to 500MB</p>
-                </div>)}
+                )}
 
                 {file && !success && !isAudioUploaded && (
                   <div className="mt-4 w-full">
@@ -293,7 +296,9 @@ export function UploadAssessment() {
                           <Check className="h-5 w-5 mr-3 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm">File uploaded successfully</p>
-                            <p className="text-sm text-green-600 truncate">{file?.name || uploadedFileName || "Audio file"}</p>
+                            <p className="text-sm text-green-600 truncate">
+                              {file?.name || uploadedFileName || "Audio file"}
+                            </p>
                           </div>
                         </div>
                         <Button
@@ -435,7 +440,6 @@ export function UploadAssessment() {
                 )}
               />
             </div>
-
           </CardContent>
 
           <CardFooter className="flex gap-4">

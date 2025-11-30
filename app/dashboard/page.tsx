@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Activity, FileText, Upload, Users } from "lucide-react"
 import Link from "next/link"
 import { DashboardHeader } from "@/components/dashboard/header"
-import apiClient, {AssessmentRecord} from "@/lib/aws-api.service";
+import  {apiClient, AssessmentRecord} from "@/lib/audio-pipeline-api.service";
 
 export default function Dashboard() {
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
@@ -32,7 +32,6 @@ export default function Dashboard() {
   const totalAssessments = assessments.length
   const pendingAssessments = assessments.filter((a) => a.status !== "COMPLETED").length
   const completedAssessments = assessments.filter((a) => a.status === "COMPLETED")
-
 
   // Get recent assessments (last 3)
   const recentAssessments = [...assessments]
@@ -168,13 +167,13 @@ export default function Dashboard() {
                 Upload New Assessment
               </Link>
             </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
+            <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
               <Link href="/dashboard/cases">
                 <FileText className="mr-2 h-4 w-4" />
                 View All Cases
               </Link>
             </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
+            <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
               <Link href="/dashboard/analytics">
                 <Activity className="mr-2 h-4 w-4" />
                 View Analytics

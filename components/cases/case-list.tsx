@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Eye, FileText, Loader2 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
-import apiClient, { type AssessmentRecord } from "@/lib/aws-api.service"
+import { apiClient, type AssessmentRecord } from "@/lib/audio-pipeline-api.service"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface CaseListProps {
@@ -88,14 +88,14 @@ export function CaseList({ statusFilter, searchTerm, sortBy = "date-desc" }: Cas
 
     try {
       // ✅ Check if analysis is already an object or needs parsing
-      let analysisObj: any;
+      let analysisObj: any
 
-      if (typeof record.analysis === 'string') {
+      if (typeof record.analysis === "string") {
         // Legacy case: analysis is still stored as string
-        analysisObj = JSON.parse(record.analysis);
+        analysisObj = JSON.parse(record.analysis)
       } else {
         // New case: analysis is already a parsed object from backend
-        analysisObj = record.analysis;
+        analysisObj = record.analysis
       }
 
       // Handle EVeNTs format with nested assessment structure

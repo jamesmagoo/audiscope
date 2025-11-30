@@ -1,17 +1,8 @@
-/**
- * API client for interacting with our AWS backend services
- */
-
-import { makeAuthenticatedRequest, getCurrentUserId, handleApiResponse } from './api-utils'
+import { getCurrentUserId, getAuthHeaders } from './api-utils'
 
 // Replace with your actual API endpoint after deployment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL
 
-if (!API_BASE_URL) {
-  console.warn("NEXT_PUBLIC_API_GATEWAY_URL environment variable is not set")
-}
-
-// Types
 export interface FileUploadRequest {
   filename: string
   fileType: string
@@ -24,7 +15,14 @@ export interface FileUploadResponse {
   key: string
 }
 
-// Assessment types
+export interface AudioSegment {
+  id?: string
+  speaker_label: string
+  start_time?: string
+  end_time?: string
+  transcript?: string
+}
+
 export interface AssessmentData {
   id?: string
   uid?: string
@@ -44,7 +42,6 @@ export interface AssessmentData {
   transcript_block?: string
 }
 
-// Full assessment record (what we get back from API)
 export interface AssessmentRecord {
   id: string
   uid: string
@@ -62,53 +59,39 @@ export interface AssessmentRecord {
   analysis: any
   error_message: string
   transcript_block: string
-  audio_segments : AudioSegment[]
+  audio_segments?: AudioSegment[]
 }
 
-export interface AudioSegment {
-  transcript? : string
-  id: number
-  speaker_label: string
-  start_time?: string
-  end_time?: string
-}
-
-// Response interface for list endpoints
 export interface AssessmentListResponse {
   records: AssessmentRecord[]
   count: number
 }
 
-
-/**
- * Generate a presigned URL for uploading a file to S3
- */
 export async function getUploadUrl(fileDetails: FileUploadRequest): Promise<FileUploadResponse> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
 
   try {
-    console.log("Requesting presigned URL for:", fileDetails.filename)
-
     const uid = await getCurrentUserId()
-    const fullRequest = {
-      ...fileDetails,
-      uid,
-    }
+    const headers = await getAuthHeaders()
 
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/uploads`, {
+    const response = await fetch(`${API_BASE_URL}/uploads`, {
       method: "POST",
-      body: JSON.stringify(fullRequest),
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...fileDetails, uid }),
     })
 
-    console.log("API response status:", response.status)
-    const data = await handleApiResponse(response)
-    
-    console.log("Received presigned URL successfully")
-    return data
+    if (!response.ok) {
+      throw new Error(`Upload URL request failed: ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
-    console.error("Error getting presigned URL:", error)
+    console.error("Error getting upload URL:", error)
     throw error
   }
 }
@@ -122,17 +105,22 @@ export async function submitAssessment(
 
   try {
     const uid = await getCurrentUserId()
-    const request = {
-      ...assessmentData,
-      uid,
-    }
+    const headers = await getAuthHeaders()
 
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/assessments`, {
+    const response = await fetch(`${API_BASE_URL}/assessments`, {
       method: "POST",
-      body: JSON.stringify(request),
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...assessmentData, uid }),
     })
 
-    const data = await handleApiResponse(response)
+    if (!response.ok) {
+      throw new Error(`Assessment submission failed: ${response.status}`)
+    }
+
+    const data = await response.json()
     return {
       success: true,
       id: data.id || data.assessmentId || "",
@@ -144,9 +132,6 @@ export async function submitAssessment(
   }
 }
 
-/**
- * Get all assessment records from /records endpoint, optionally filtered by status
- */
 export async function getRecords(status?: string): Promise<AssessmentListResponse> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
@@ -154,42 +139,51 @@ export async function getRecords(status?: string): Promise<AssessmentListRespons
 
   try {
     const uid = await getCurrentUserId()
+    const headers = await getAuthHeaders()
     const url = new URL(`${API_BASE_URL}/records`)
-    
+
     if (status && status !== "all") {
       url.searchParams.append("status", status)
     }
     url.searchParams.append("uid", uid)
 
-    const response = await makeAuthenticatedRequest(url.toString())
-    return await handleApiResponse(response)
+    const response = await fetch(url.toString(), {
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Get records failed: ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error getting records:", error)
     throw error
   }
 }
 
-
-/**
- * Get a specific assessment by ID
- */
 export async function getAssessmentById(id: string): Promise<AssessmentRecord> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
   }
 
   try {
-    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/assessments/${id}`)
-    return await handleApiResponse(response)
+    const headers = await getAuthHeaders()
+    const response = await fetch(`${API_BASE_URL}/assessments/${id}`, {
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Get assessment failed: ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error getting assessment:", error)
     throw error
   }
 }
 
-/**
- * Get a specific record by ID from /records endpoint
- */
 export async function getRecordById(id: string): Promise<AssessmentRecord> {
   if (!API_BASE_URL) {
     throw new Error("API endpoint not configured")
@@ -197,11 +191,19 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
 
   try {
     const uid = await getCurrentUserId()
+    const headers = await getAuthHeaders()
     const url = new URL(`${API_BASE_URL}/records/${id}`)
     url.searchParams.append("uid", uid)
 
-    const response = await makeAuthenticatedRequest(url.toString())
-    return await handleApiResponse(response)
+    const response = await fetch(url.toString(), {
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Get record failed: ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
     console.error("Error getting record:", error)
     throw error
@@ -211,12 +213,10 @@ export async function getRecordById(id: string): Promise<AssessmentRecord> {
 /**
  * Complete API client for our backend
  */
-const apiClient = {
+export const apiClient = {
   submitAssessment,
   getUploadUrl,
   getRecords,
   getAssessmentById,
   getRecordById,
 }
-
-export default apiClient

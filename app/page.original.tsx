@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Activity, Users, Mic, BarChart3, Upload, Brain, FileText, TrendingUp, Building2, Globe, Zap, Palette, Shield, Package2, Lock, Bot } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export default function LandingPage() {
   const { user } = useAuth()

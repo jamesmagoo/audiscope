@@ -1,6 +1,5 @@
 import type React from "react"
 import { Button } from "@/components/ui/button"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Upload } from "lucide-react"
 import Link from "next/link"
 
@@ -13,12 +12,9 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ title, description, action }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-4">
-        <SidebarTrigger className="md:hidden" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {description && <p className="text-muted-foreground">{description}</p>}
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        {description && <p className="text-muted-foreground">{description}</p>}
       </div>
       {action || (
         <Button asChild>
