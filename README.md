@@ -22,9 +22,47 @@ Continue building your app on:
 
 **[https://v0.dev/chat/projects/VeZzddpVrrb](https://v0.dev/chat/projects/VeZzddpVrrb)**
 
-## How It Works
+## Getting Started
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### Quick Start
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Set up environment files (automated)
+./setup-env.sh
+
+# 3. Start development server
+pnpm dev
+```
+
+### Environment Setup
+
+This project requires environment configuration files that are **NOT committed to git** for security.
+
+Run the setup script to create them:
+```bash
+./setup-env.sh
+```
+
+Or see [DEV_SETUP.md](./DEV_SETUP.md) for detailed manual setup instructions.
+
+### Development Commands
+
+```bash
+pnpm dev      # Cloud development (recommended)
+pnpm local    # Local development with LocalStack
+pnpm staging  # Staging environment
+pnpm build    # Production build
+```
+
+## Documentation
+
+- **[DEV_SETUP.md](./DEV_SETUP.md)** - Detailed development environment setup
+- **[CLAUDE.md](./CLAUDE.md)** - Complete project documentation
+- **[ENVIRONMENT_COMMANDS.md](./ENVIRONMENT_COMMANDS.md)** - Environment commands reference
+
+## Security
+
+⚠️ **Important:** Never commit `.env*` files (except `.env.example`) to git. They contain sensitive credentials and are automatically gitignored.

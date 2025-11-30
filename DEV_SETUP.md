@@ -12,6 +12,25 @@ Before you begin, ensure you have:
 - Access to AudiScope AWS resources (Cognito, API Gateway, etc.)
 - Backend API deployed or running locally
 
+## Quick Setup (Automated)
+
+The fastest way to get started is using the setup script:
+
+```bash
+# Run the automated setup script
+./setup-env.sh
+
+# Follow the prompts to create your environment files
+# Press Enter to accept default values or provide your own
+```
+
+This creates three environment files locally:
+- `.env.dev-cloud` - Cloud development (recommended)
+- `.env.development` - Local development with LocalStack
+- `.env.staging` - Staging environment
+
+**Note:** These files are gitignored and will NOT be committed for security.
+
 ## Setup Options
 
 Choose the setup that matches your development needs:
