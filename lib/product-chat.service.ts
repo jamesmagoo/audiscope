@@ -1,17 +1,14 @@
 import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from './api-utils'
 
-// Environment-based API URL
-// Use NEXT_PUBLIC_CORE_API_URL if set, otherwise fallback to localhost
-const CORE_API_BASE = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api'
-
-const API_PATH = '/v1/chat'
-const ENDPOINT = CORE_API_BASE + API_PATH
+// Use Next.js proxy path - all requests go through /api/core which rewrites to backend
+const API_PATH = '/api/core/v1/chat'
+const ENDPOINT = API_PATH
 
 console.log('Product Chat Service Config:', {
   NODE_ENV: process.env.NODE_ENV,
-  CORE_API_BASE,
   API_PATH,
-  ENDPOINT
+  ENDPOINT,
+  USING_PROXY: true
 })
 
 /**
@@ -159,18 +156,19 @@ export async function sendMessage(
  */
 export async function listSessions(productId?: string, limit = 50, offset = 0): Promise<ListSessionsResult> {
   try {
-    const url = new URL(`${ENDPOINT}/sessions`)
-    url.searchParams.append('limit', limit.toString())
-    url.searchParams.append('offset', offset.toString())
+    const params = new URLSearchParams()
+    params.append('limit', limit.toString())
+    params.append('offset', offset.toString())
 
     // Filter by product_id on the backend
     if (productId) {
-      url.searchParams.append('product_id', productId)
+      params.append('product_id', productId)
     }
 
-    console.log('listSessions: Making GET request to:', url.toString())
+    const url = `${ENDPOINT}/sessions?${params.toString()}`
+    console.log('listSessions: Making GET request to:', url)
 
-    const response = await makeAuthenticatedRequest(url.toString())
+    const response = await makeAuthenticatedRequest(url)
     const data = await handleApiResponse(response)
 
     console.log('listSessions: Response:', data)
@@ -189,12 +187,13 @@ export async function getSession(sessionId: string): Promise<GetSessionResult> {
   try {
     const organisationId = "a5c70880-0aae-4e44-9a6e-a38c0e9383e8" // TODO: Get from user context
 
-    const url = new URL(`${ENDPOINT}/sessions/${sessionId}`)
-    url.searchParams.append('organisation_id', organisationId)
+    const params = new URLSearchParams()
+    params.append('organisation_id', organisationId)
 
-    console.log('getSession: Making GET request to:', url.toString())
+    const url = `${ENDPOINT}/sessions/${sessionId}?${params.toString()}`
+    console.log('getSession: Making GET request to:', url)
 
-    const response = await makeAuthenticatedRequest(url.toString())
+    const response = await makeAuthenticatedRequest(url)
     const data = await handleApiResponse(response)
 
     console.log('getSession: Response:', data)

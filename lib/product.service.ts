@@ -1,18 +1,14 @@
 import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from './api-utils'
 
-// Environment-based API URL
-// Use NEXT_PUBLIC_CORE_API_URL if set, otherwise fallback to localhost
-const CORE_API_BASE = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api'
-
-const API_PATH = '/v1/products'
-const ENDPOINT = CORE_API_BASE + API_PATH
+// Use Next.js proxy path - all requests go through /api/core which rewrites to backend
+const API_PATH = '/api/core/v1/products'
+const ENDPOINT = API_PATH
 
 console.log('Product Service Config:', {
   NODE_ENV: process.env.NODE_ENV,
-  CORE_API_BASE,
   API_PATH,
   ENDPOINT,
-  NEXT_PUBLIC_CORE_API_URL: process.env.NEXT_PUBLIC_CORE_API_URL
+  USING_PROXY: true
 })
 
 // File upload URL request
@@ -253,14 +249,15 @@ export async function getProduct(id: string): Promise<ProductResponse> {
  */
 export async function listProducts( status?: string, limit = 50, offset = 0): Promise<ProductResponse[]> {
   try {
-    const url = new URL(ENDPOINT)
-    if (status) url.searchParams.append('status', status)
-    url.searchParams.append('limit', limit.toString())
-    url.searchParams.append('offset', offset.toString())
+    const params = new URLSearchParams()
+    if (status) params.append('status', status)
+    params.append('limit', limit.toString())
+    params.append('offset', offset.toString())
 
-    console.log('listProducts: Making GET request to:', url.toString())
+    const url = `${ENDPOINT}?${params.toString()}`
+    console.log('listProducts: Making GET request to:', url)
 
-    const response = await makeAuthenticatedRequest(url.toString())
+    const response = await makeAuthenticatedRequest(url)
 
     console.log('listProducts: Response status:', response.status)
 

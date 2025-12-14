@@ -8,7 +8,7 @@ export const metadata = {
 }
 
 interface PageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 function LoadingState() {
@@ -19,10 +19,11 @@ function LoadingState() {
   )
 }
 
-export default function LearningPage({ searchParams }: PageProps) {
+export default async function LearningPage({ searchParams }: PageProps) {
   // Extract product ID from query params if present
-  const productId = typeof searchParams.product === 'string'
-    ? searchParams.product
+  const params = await searchParams
+  const productId = typeof params.product === 'string'
+    ? params.product
     : undefined
 
   return (

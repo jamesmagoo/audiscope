@@ -13,8 +13,8 @@ import { makeAuthenticatedRequest, handleApiResponse } from './api-utils'
 // API Configuration
 // ============================================================================
 
-// Use NEXT_PUBLIC_CORE_API_URL if set, otherwise fallback to localhost
-const CORE_API_BASE = process.env.NEXT_PUBLIC_CORE_API_URL || 'http://localhost:5002/api'
+// Use Next.js proxy path - all requests go through /api/core which rewrites to backend
+const CORE_API_BASE = '/api/core'
 
 // ============================================================================
 // TypeScript Interfaces

@@ -11,6 +11,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/core/:path*',
+        destination: process.env.CORE_API_URL + '/:path*'
+      }
+    ]
+  }
 }
 
 export default withSentryConfig(nextConfig, {
