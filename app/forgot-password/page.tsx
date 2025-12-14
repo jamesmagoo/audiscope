@@ -56,13 +56,12 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md p-6">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/acuwrite-transparent-tokEQYQcoQKL4Hqen8c97P1ZL3HJwU.png"
-              alt="Acuwrite Logo"
-              width={200}
-              height={50}
-              className="h-12 w-auto mx-auto"
-            />
+            <div className="flex items-center justify-center space-x-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+                <span className="text-2xl font-bold text-primary-foreground">L</span>
+              </div>
+              <span className="text-3xl font-bold text-foreground">Landy AI</span>
+            </div>
           </Link>
           <h1 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
             Reset your password

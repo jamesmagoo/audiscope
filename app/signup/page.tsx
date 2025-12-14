@@ -137,17 +137,17 @@ export default function SignupPage() {
           <Link href="/" className="inline-block">
             <div className="flex items-center justify-center space-x-2">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-                <span className="text-2xl font-bold text-primary-foreground">A</span>
+                <span className="text-2xl font-bold text-primary-foreground">L</span>
               </div>
-              <span className="text-3xl font-bold text-foreground">AudiScope</span>
+              <span className="text-3xl font-bold text-foreground">Landy AI</span>
             </div>
           </Link>
           <h1 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
             {step === 'signup' ? 'Create account' : 'Confirm your email'}
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {step === 'signup' 
-              ? 'Get started with your AudiScope account' 
+            {step === 'signup'
+              ? 'Get started with your Landy AI account'
               : `We sent a confirmation code to ${email}`
             }
           </p>

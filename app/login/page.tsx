@@ -136,9 +136,9 @@ function LoginForm() {
         <Link href="/" className="inline-block">
           <div className="flex items-center justify-center space-x-2">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-              <span className="text-2xl font-bold text-primary-foreground">A</span>
+              <span className="text-2xl font-bold text-primary-foreground">L</span>
             </div>
-            <span className="text-3xl font-bold text-foreground">AudiScope</span>
+            <span className="text-3xl font-bold text-foreground">Landy AI</span>
           </div>
         </Link>
         <h1 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
@@ -146,7 +146,7 @@ function LoginForm() {
         </h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           {step === 'login'
-            ? 'Sign in to your AudiScope account'
+            ? 'Sign in to your Landy AI account'
             : 'Please set a new password for your account'
           }
         </p>

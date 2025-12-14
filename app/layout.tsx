@@ -11,8 +11,8 @@ import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AudiScope - EVeNTs Assessor",
-  description: "Endovascular Non-Technical Skills Assessment Dashboard",
+  title: "Landy AI - Medical Device Intelligence",
+  description: "AI-powered medical device training and knowledge platform",
     generator: 'v0.dev'
 }
 

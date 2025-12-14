@@ -3,7 +3,7 @@ import { LearningDashboard } from '@/components/learning/learning-dashboard'
 import { Loader2 } from 'lucide-react'
 
 export const metadata = {
-  title: 'Learning Hub | AudiScope',
+  title: 'Learning Hub | Landy AI',
   description: 'Track your learning progress and identify knowledge gaps'
 }
 
