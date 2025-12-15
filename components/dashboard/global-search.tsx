@@ -10,12 +10,12 @@ export function GlobalSearch() {
 
   return (
     <div className="relative w-full max-w-sm">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground disabled" />
       <Input
         type="search"
-        placeholder="Search assessments..."
+        placeholder="Search.."
         className={cn(
-          "pl-8 pr-20 h-9 transition-all",
+          "pl-8 pr-20 h-9 transition-all disabled",
           focused && "ring-2 ring-ring"
         )}
         onFocus={() => setFocused(true)}
