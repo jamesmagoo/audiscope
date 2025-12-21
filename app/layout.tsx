@@ -13,10 +13,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Landy AI - Medical Device Intelligence",
   description: "AI-powered medical device training and knowledge platform",
-  generator: 'Next.js',
-  icons: {
-    icon: '/favicon.ico',
-  }
+  generator: 'Next.js'
 }
 
 export default function RootLayout({
