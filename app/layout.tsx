@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/providers/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
 import QueryProvider from "@/components/providers/query-provider";
 import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -28,6 +29,7 @@ export default function RootLayout({
         <AuthProvider>
           <QueryProvider>
             {children}
+            <SpeedInsights />
             <Toaster />
             <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
           </QueryProvider>
