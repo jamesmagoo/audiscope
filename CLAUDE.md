@@ -5,13 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 Development commands:
-- `pnpm dev` - Start development server with cloud resources (.env.dev-cloud)
-- `pnpm local` - Start development server with LocalStack (.env.development)
-- `pnpm staging` - Start development server with staging environment (.env.staging)
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
-- `pnpm lint` - Run ESLint
-- `pnpm typecheck` - Run TypeScript type checking
+- `bun dev` - Start development server with cloud resources (.env.dev-cloud)
+- `bun local` - Start development server with LocalStack (.env.development)
+- `bun staging` - Start development server with staging environment (.env.staging)
+- `bun run build` - Build for production
+- `bun start` - Start production server
+- `bun lint` - Run ESLint
+- `bun typecheck` - Run TypeScript type checking
+
+Note: Use `bun run build` (not `bun build`) because `bun build` is Bun's bundler command.
 
 ## Architecture Overview
 
@@ -73,7 +75,7 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 
 ### Development Notes
 
-- Uses pnpm as package manager
+- Uses bun as package manager
 - Built with v0.dev integration (auto-synced from v0.dev deployments)
 - Deployed on Vercel
 - No testing framework currently configured
@@ -98,10 +100,10 @@ The project includes four environment configuration files:
 
 ```bash
 # 1. Install dependencies
-pnpm install
+bun install
 
 # 2. Start development server (uses .env.dev-cloud automatically)
-pnpm dev
+bun dev
 ```
 
 This configuration uses:
@@ -115,7 +117,7 @@ This configuration uses:
 
 ```bash
 # 1. Install dependencies
-pnpm install
+bun install
 
 # 2. Install and start LocalStack (for local S3 testing)
 pip install localstack
@@ -125,7 +127,7 @@ localstack start
 # (Use your backend's start command)
 
 # 4. Start development server (uses .env.development automatically)
-pnpm local
+bun local
 ```
 
 ### Required Environment Variables
@@ -235,17 +237,17 @@ Environment switching is now handled automatically via npm scripts:
 
 **Dev-Cloud (All Cloud Resources):**
 ```bash
-pnpm dev
+bun dev
 ```
 
 **LocalStack (Local Development):**
 ```bash
-pnpm local
+bun local
 ```
 
 **Staging Environment:**
 ```bash
-pnpm staging
+bun staging
 ```
 
 No need to manually copy `.env` files - each command uses its corresponding environment file automatically.
@@ -280,13 +282,13 @@ Check your browser console on app load. The application logs will show:
 
 ### First-time Setup Checklist
 
-- [ ] Install dependencies: `pnpm install`
+- [ ] Install dependencies: `bun install`
 - [ ] Choose your environment and run the corresponding command:
-  - `pnpm dev` - All cloud resources (recommended)
-  - `pnpm local` - LocalStack with local backend
-  - `pnpm staging` - Staging environment
-- [ ] If using LocalStack (`pnpm local`): Install and start LocalStack first
-- [ ] If using dev-cloud (`pnpm dev`): Verify backend ALB is accessible
+  - `bun dev` - All cloud resources (recommended)
+  - `bun local` - LocalStack with local backend
+  - `bun staging` - Staging environment
+- [ ] If using LocalStack (`bun local`): Install and start LocalStack first
+- [ ] If using dev-cloud (`bun dev`): Verify backend ALB is accessible
 - [ ] Test authentication (login/signup)
 - [ ] Verify file upload functionality
 - [ ] Check browser console for any errors
@@ -294,9 +296,9 @@ Check your browser console on app load. The application logs will show:
 ## Code Quality & Development Tools
 
 ### Available Scripts for Code Quality
-- `pnpm lint` - ESLint for code quality and consistency
-- `pnpm typecheck` - TypeScript type checking without compilation
-- `pnpm build` - Production build (includes type checking)
+- `bun lint` - ESLint for code quality and consistency
+- `bun typecheck` - TypeScript type checking without compilation
+- `bun run build` - Production build (includes type checking)
 
 ### Recommended Development Setup
 - Install ESLint extension in your editor for real-time linting
@@ -323,8 +325,8 @@ While not currently configured, consider adding:
 - Console logs are preserved in development mode
 
 ### Troubleshooting
-- **Build errors**: Run `pnpm typecheck` to identify TypeScript issues
-- **Lint errors**: Run `pnpm lint` to see ESLint warnings/errors
+- **Build errors**: Run `bun typecheck` to identify TypeScript issues
+- **Lint errors**: Run `bun lint` to see ESLint warnings/errors
 - **API connectivity**: Verify `NEXT_PUBLIC_API_GATEWAY_URL` in `.env.local`
 - **Upload issues**: Check browser console for S3 presigned URL errors
 
