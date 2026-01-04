@@ -38,18 +38,18 @@ export default function ProductPage({ params }: ProductPageProps) {
   }, [searchParams])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden">
       {/* Header spans full width - fixed height */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 w-full">
         <ProductDetailHeader id={id} />
       </div>
 
       {/* Content area with sidebar below header - takes remaining height */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Main content */}
-        <div className="flex-1 min-w-0 overflow-hidden relative min-h-0 flex-shrink">
-          {/* Floating trigger button */}
-          <div className="absolute top-4 right-4 z-10">
+      <div className="flex-1 flex min-h-0 overflow-hidden w-full">
+        {/* Main content - On mobile: full width, no padding */}
+        <div className="flex-1 min-w-0 overflow-hidden relative min-h-0 flex-shrink w-full md:pr-4">
+          {/* Floating toggle button for files sidebar - Desktop only */}
+          <div className="absolute top-4 right-4 z-10 hidden md:block">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -73,21 +73,21 @@ export default function ProductPage({ params }: ProductPageProps) {
             </TooltipProvider>
           </div>
 
-          <div className="h-full overflow-hidden min-h-0">
-            <ProductDetails id={id} initialSessionId={initialSessionId} />
-          </div>
+          <ProductDetails id={id} initialSessionId={initialSessionId} />
         </div>
 
-        {/* Sidebar - only shown when sidebarOpen is true */}
+        {/* Sidebar - only shown when sidebarOpen is true, hidden on mobile */}
         {sidebarOpen && (
-          <ProductFilesSidebar
-            files={files}
-            productId={id}
-            onUploadClick={() => {
-              // TODO: Implement file upload modal or redirect
-              console.log('Upload files clicked')
-            }}
-          />
+          <div className="hidden md:block">
+            <ProductFilesSidebar
+              files={files}
+              productId={id}
+              onUploadClick={() => {
+                // TODO: Implement file upload modal or redirect
+                console.log('Upload files clicked')
+              }}
+            />
+          </div>
         )}
       </div>
     </div>
