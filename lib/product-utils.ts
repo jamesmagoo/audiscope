@@ -84,3 +84,93 @@ export function getFileStatus(file: ProductFile): string {
 export function hasProductImage(files?: ProductFile[]): boolean {
   return getProductImage(files) !== null
 }
+
+/**
+ * Format file size in bytes to human-readable format
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+/**
+ * Get the appropriate icon component for a file type
+ */
+export function getFileTypeIcon(fileType: string): any {
+  const {
+    FileText,
+    Image,
+    Video,
+    FileSpreadsheet,
+    File,
+  } = require('lucide-react')
+
+  const FILE_TYPE_ICONS: Record<string, any> = {
+    ifu: FileText,
+    product_image: Image,
+    marketing_video: Video,
+    brochure: FileText,
+    technical_spec: FileSpreadsheet,
+    clinical_data: FileSpreadsheet,
+  }
+
+  return FILE_TYPE_ICONS[fileType] || File
+}
+
+/**
+ * Get processing status display configuration
+ */
+export function getProcessingStatusDisplay(status: string): {
+  label: string
+  icon: any
+  color: string
+  variant: 'default' | 'secondary' | 'destructive'
+} {
+  const {
+    CheckCircle2,
+    Clock,
+    XCircle,
+    AlertCircle,
+  } = require('lucide-react')
+
+  switch (status) {
+    case 'completed':
+      return {
+        label: 'Completed',
+        icon: CheckCircle2,
+        color: 'text-green-600',
+        variant: 'default' as const
+      }
+    case 'processing':
+      return {
+        label: 'Processing',
+        icon: Clock,
+        color: 'text-blue-600',
+        variant: 'secondary' as const
+      }
+    case 'pending':
+      return {
+        label: 'Pending',
+        icon: Clock,
+        color: 'text-amber-600',
+        variant: 'secondary' as const
+      }
+    case 'failed':
+      return {
+        label: 'Failed',
+        icon: XCircle,
+        color: 'text-red-600',
+        variant: 'destructive' as const
+      }
+    default:
+      return {
+        label: status,
+        icon: AlertCircle,
+        color: 'text-gray-600',
+        variant: 'secondary' as const
+      }
+  }
+}
