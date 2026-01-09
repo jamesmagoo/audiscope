@@ -241,11 +241,13 @@ export async function handleApiResponse(response: Response): Promise<any> {
           text: errorText
         })
       } catch {
-        // Use the default error message
+        // Use the default error message with better logging
+        errorMessage = `HTTP ${response.status} ${response.statusText || 'Error'}`
         console.error('API Error (no body):', {
           status: response.status,
           statusText: response.statusText,
-          url: response.url
+          url: response.url,
+          method: 'Unknown'
         })
       }
     }

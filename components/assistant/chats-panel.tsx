@@ -38,7 +38,7 @@ export function ChatsPanel({ activeConversationId, onSelectConversation, onConve
   const deleteChat = useDeleteChat()
   
   // Convert API chats to UI format
-  const conversations: ChatsUI[] = chats.map((chat : ChatMessage) => ({
+  const conversations: ChatsUI[] = chats.map((chat: Chat) => ({
     ...chat,
     lastMessage: undefined, // API doesn't provide last message yet
     messageCount: 0 // API doesn't provide message count yet
