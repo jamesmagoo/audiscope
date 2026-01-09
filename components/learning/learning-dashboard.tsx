@@ -12,11 +12,13 @@ import {
   Award,
   BookOpen,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  FileQuestion
 } from 'lucide-react'
 import { ProgressTracker } from './progress-tracker'
 import { KnowledgeGapsPanel } from './knowledge-gaps-panel'
 import { LearningPathCard } from './learning-path-card'
+import { QuizList } from './quiz-list'
 import Link from 'next/link'
 
 // Dummy data for demonstration
@@ -322,8 +324,12 @@ export function LearningDashboard({ productId }: LearningDashboardProps) {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="gaps" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="quizzes" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="quizzes" className="flex items-center gap-2">
+            <FileQuestion className="h-4 w-4" />
+            Quizzes
+          </TabsTrigger>
           <TabsTrigger value="gaps" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Knowledge Gaps
@@ -342,6 +348,10 @@ export function LearningDashboard({ productId }: LearningDashboardProps) {
             Progress
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="quizzes" className="mt-6">
+          <QuizList />
+        </TabsContent>
 
         <TabsContent value="gaps" className="mt-6">
           <KnowledgeGapsPanel gaps={gaps} />
