@@ -39,6 +39,7 @@ export function AppSidebar() {
 
   const navItems = [
     { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
+    { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: false },
     { name: "Content Management", href: "/dashboard/content", icon: FileEdit, disabled: false },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true, showDisabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true, showDisabled: true },
@@ -46,7 +47,6 @@ export function AppSidebar() {
     { name: "Settings", href: "/dashboard/settings", icon: Settings, disabled: true, showDisabled: true },
     { name: "Help & Support", href: "/dashboard/support", icon: HelpCircle, disabled: true, showDisabled: true },
     { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true, showDisabled: false },
-    { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: true, showDisabled: false },
     { name: "NOTTS", href: "/dashboard", icon: Home, disabled: true, showDisabled: false },
     { name: "Case Analysis", href: "/dashboard/cases", icon: FileText, disabled: true, showDisabled: false },
     { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true, showDisabled: false },
