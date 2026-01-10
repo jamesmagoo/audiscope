@@ -18,6 +18,7 @@ import {
   getQuizAttempts,
   getProductQuizStats,
   getUserQuizStats,
+  getUserAttempts,
 } from '@/lib/learning.service'
 import type {
   LearningQuiz,
@@ -131,6 +132,17 @@ export function useUserQuizStats() {
   })
 }
 
+/**
+ * Get all quiz attempts for the current user
+ * Query key: ['learning', 'user-attempts']
+ */
+export function useUserAttempts() {
+  return useQuery<QuizAttempt[]>({
+    queryKey: ['learning', 'user-attempts'],
+    queryFn: getUserAttempts,
+  })
+}
+
 // ============================================================================
 // Mutation Hooks
 // ============================================================================
@@ -201,6 +213,7 @@ export function useCompleteQuizAttempt() {
       queryClient.invalidateQueries({ queryKey: ['learning', 'quiz-attempts', data.quiz_id] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'product-stats'] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['learning', 'user-attempts'] })
 
       // Cache the completed attempt
       queryClient.setQueryData(['learning', 'attempt', data.id], data)

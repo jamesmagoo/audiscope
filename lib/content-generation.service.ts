@@ -34,7 +34,8 @@ import type {
   PublishResponse,
 } from './types/generated-content'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'
+// Use Next.js proxy path - all requests go through /api/core which rewrites to backend
+const API_PATH = '/api/core/v1/content'
 
 /**
  * Generate quiz from product IFU
@@ -44,7 +45,7 @@ export async function generateQuiz(
   request: GenerateQuizRequest
 ): Promise<GenerateQuizResponse> {
   const response = await makeAuthenticatedRequest(
-    `${API_BASE}/api/v1/content/generate-quiz`,
+    `${API_PATH}/generate-quiz`,
     {
       method: 'POST',
       headers: {
@@ -68,7 +69,7 @@ export async function listAllGenerations(
   if (params?.limit) searchParams.append('limit', params.limit.toString())
   if (params?.offset) searchParams.append('offset', params.offset.toString())
 
-  const url = `${API_BASE}/api/v1/content/generations${
+  const url = `${API_PATH}/generations${
     searchParams.toString() ? `?${searchParams.toString()}` : ''
   }`
 
@@ -88,7 +89,7 @@ export async function listGenerations(
   if (params?.limit) searchParams.append('limit', params.limit.toString())
   if (params?.offset) searchParams.append('offset', params.offset.toString())
 
-  const url = `${API_BASE}/api/v1/content/products/${productId}/generations${
+  const url = `${API_PATH}/products/${productId}/generations${
     searchParams.toString() ? `?${searchParams.toString()}` : ''
   }`
 
@@ -102,7 +103,7 @@ export async function listGenerations(
  */
 export async function getGeneration(id: string): Promise<Generation> {
   const response = await makeAuthenticatedRequest(
-    `${API_BASE}/api/v1/content/generations/${id}`
+    `${API_PATH}/generations/${id}`
   )
   return handleApiResponse(response)
 }
@@ -116,7 +117,7 @@ export async function updateGeneration(
   request: UpdateContentRequest
 ): Promise<UpdateContentResponse> {
   const response = await makeAuthenticatedRequest(
-    `${API_BASE}/api/v1/content/generations/${id}`,
+    `${API_PATH}/generations/${id}`,
     {
       method: 'PUT',
       headers: {
@@ -135,7 +136,7 @@ export async function updateGeneration(
  */
 export async function publishGeneration(id: string): Promise<PublishResponse> {
   const response = await makeAuthenticatedRequest(
-    `${API_BASE}/api/v1/content/generations/${id}/publish`,
+    `${API_PATH}/generations/${id}/publish`,
     {
       method: 'POST',
       headers: {

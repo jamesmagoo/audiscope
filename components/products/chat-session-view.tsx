@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, MessageSquareText, BookOpen, GraduationCap, HelpCircle } from 'lucide-react'
 import { Message, type MessageType } from '@/components/assistant/message'
 import { MessageInput } from '@/components/assistant/message-input'
-import type { GetSessionResult, ChatMessage } from '@/lib/product-chat.service'
+import type { GetSessionResult, ChatMessage } from '@/lib/chat.service'
 
 interface ChatSessionViewProps {
   sessionId: string

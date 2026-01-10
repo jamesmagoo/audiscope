@@ -19,18 +19,15 @@ import type {
   UserQuizStats,
 } from './types/learning'
 
-// Base URL for Learning API
-const getBaseUrl = () => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002'
-  return `${baseUrl}/api/v1/learning`
-}
+// Use Next.js proxy path - all requests go through /api/core which rewrites to backend
+const API_PATH = '/api/core/v1/learning'
 
 /**
  * List quizzes for a specific product
  * GET /api/v1/learning/products/{productID}/quizzes
  */
 export async function listProductQuizzes(productId: string): Promise<LearningQuiz[]> {
-  const url = `${getBaseUrl()}/products/${productId}/quizzes`
+  const url = `${API_PATH}/products/${productId}/quizzes`
   const response = await makeAuthenticatedRequest(url)
   const data = await handleApiResponse(response)
   return data.quizzes || []
@@ -41,7 +38,7 @@ export async function listProductQuizzes(productId: string): Promise<LearningQui
  * GET /api/v1/learning/quizzes/{quizID}
  */
 export async function getQuizDetail(quizId: string): Promise<QuizDetail> {
-  const url = `${getBaseUrl()}/quizzes/${quizId}`
+  const url = `${API_PATH}/quizzes/${quizId}`
   const response = await makeAuthenticatedRequest(url)
   return await handleApiResponse(response)
 }
@@ -51,7 +48,7 @@ export async function getQuizDetail(quizId: string): Promise<QuizDetail> {
  * POST /api/v1/learning/quizzes/{quizID}/attempts
  */
 export async function startQuizAttempt(quizId: string): Promise<QuizAttempt> {
-  const url = `${getBaseUrl()}/quizzes/${quizId}/attempts`
+  const url = `${API_PATH}/quizzes/${quizId}/attempts`
   const response = await makeAuthenticatedRequest(url, {
     method: 'POST',
     headers: {
@@ -69,7 +66,7 @@ export async function submitAnswer(
   attemptId: string,
   answer: AnswerSubmission
 ): Promise<AnswerFeedback> {
-  const url = `${getBaseUrl()}/quiz-attempts/${attemptId}/answers`
+  const url = `${API_PATH}/quiz-attempts/${attemptId}/answers`
   const response = await makeAuthenticatedRequest(url, {
     method: 'POST',
     headers: {
@@ -85,7 +82,7 @@ export async function submitAnswer(
  * POST /api/v1/learning/quiz-attempts/{attemptID}/complete
  */
 export async function completeQuizAttempt(attemptId: string): Promise<QuizAttemptWithAnswers> {
-  const url = `${getBaseUrl()}/quiz-attempts/${attemptId}/complete`
+  const url = `${API_PATH}/quiz-attempts/${attemptId}/complete`
   const response = await makeAuthenticatedRequest(url, {
     method: 'POST',
     headers: {
@@ -100,7 +97,7 @@ export async function completeQuizAttempt(attemptId: string): Promise<QuizAttemp
  * GET /api/v1/learning/quiz-attempts/{attemptID}
  */
 export async function getAttemptResults(attemptId: string): Promise<QuizAttemptWithAnswers> {
-  const url = `${getBaseUrl()}/quiz-attempts/${attemptId}`
+  const url = `${API_PATH}/quiz-attempts/${attemptId}`
   const response = await makeAuthenticatedRequest(url)
   return await handleApiResponse(response)
 }
@@ -121,7 +118,7 @@ export async function listAllQuizzes(
   if (status) {
     params.append('status', status)
   }
-  const url = `${getBaseUrl()}/quizzes${params.toString() ? `?${params.toString()}` : ''}`
+  const url = `${API_PATH}/quizzes${params.toString() ? `?${params.toString()}` : ''}`
   const response = await makeAuthenticatedRequest(url)
   const data = await handleApiResponse(response)
   return data.quizzes || []
@@ -133,7 +130,7 @@ export async function listAllQuizzes(
  * (Recommended additional endpoint - not yet implemented in backend)
  */
 export async function getQuizAttempts(quizId: string): Promise<QuizAttempt[]> {
-  const url = `${getBaseUrl()}/quizzes/${quizId}/attempts`
+  const url = `${API_PATH}/quizzes/${quizId}/attempts`
   const response = await makeAuthenticatedRequest(url)
   const data = await handleApiResponse(response)
   return data.attempts || []
@@ -145,7 +142,7 @@ export async function getQuizAttempts(quizId: string): Promise<QuizAttempt[]> {
  * (Recommended additional endpoint - not yet implemented in backend)
  */
 export async function getProductQuizStats(productId: string): Promise<ProductQuizStats> {
-  const url = `${getBaseUrl()}/stats/products/${productId}`
+  const url = `${API_PATH}/stats/products/${productId}`
   const response = await makeAuthenticatedRequest(url)
   return await handleApiResponse(response)
 }
@@ -156,7 +153,18 @@ export async function getProductQuizStats(productId: string): Promise<ProductQui
  * (Recommended additional endpoint - not yet implemented in backend)
  */
 export async function getUserQuizStats(): Promise<UserQuizStats> {
-  const url = `${getBaseUrl()}/stats/user`
+  const url = `${API_PATH}/stats/user`
   const response = await makeAuthenticatedRequest(url)
   return await handleApiResponse(response)
+}
+
+/**
+ * Get all quiz attempts for the current user
+ * GET /api/v1/learning/users/me/attempts
+ */
+export async function getUserAttempts(): Promise<QuizAttempt[]> {
+  const url = `${API_PATH}/users/me/attempts`
+  const response = await makeAuthenticatedRequest(url)
+  const data = await handleApiResponse(response)
+  return data.attempts || data || []
 }
