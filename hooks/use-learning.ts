@@ -51,13 +51,36 @@ export function useProductQuizzes(productId: string | null) {
 }
 
 /**
- * List all quizzes with optional status filter
+ * List all quizzes across all products with optional status filter
  * Query key: ['learning', 'quizzes', status]
+ *
+ * Note: This aggregates quizzes from all products since the backend
+ * doesn't have a global /quizzes endpoint yet.
  */
 export function useAllQuizzes(status?: 'not_started' | 'in_progress' | 'completed') {
   return useQuery<LearningQuiz[]>({
     queryKey: ['learning', 'quizzes', status],
-    queryFn: () => listAllQuizzes(status),
+    queryFn: async () => {
+      // First, fetch all products
+      const { listProducts } = await import('@/lib/product.service')
+      const products = await listProducts()
+
+      if (!products || products.length === 0) {
+        return []
+      }
+
+      // Then fetch quizzes for each product in parallel
+      const quizzesByProduct = await Promise.all(
+        products.map(product => listProductQuizzes(product.id))
+      )
+
+      // Flatten and optionally filter by status
+      const allQuizzes = quizzesByProduct.flat()
+      if (status) {
+        return allQuizzes.filter(quiz => quiz.completion_status === status)
+      }
+      return allQuizzes
+    },
   })
 }
 
