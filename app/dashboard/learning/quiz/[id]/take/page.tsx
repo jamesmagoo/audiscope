@@ -2,18 +2,18 @@
 
 import { use } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { QuizResultsSummary } from '@/components/learning/quiz-taking/quiz-results-summary'
+import { QuizTaker } from '@/components/learning/quiz-taking/quiz-taker'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 
-interface QuizResultsPageProps {
+interface QuizTakePageProps {
   params: Promise<{
     id: string
   }>
 }
 
-export default function QuizResultsPage({ params }: QuizResultsPageProps) {
-  const { id } = use(params)
+export default function QuizTakePage({ params }: QuizTakePageProps) {
+  const { id: quizId } = use(params)
   const searchParams = useSearchParams()
   const attemptId = searchParams.get('attemptId')
 
@@ -24,7 +24,7 @@ export default function QuizResultsPage({ params }: QuizResultsPageProps) {
           <CardContent className="py-12">
             <Alert variant="destructive">
               <AlertDescription>
-                Missing attempt ID. Please complete a quiz to view results.
+                No attempt ID found. Please start the quiz from the quiz details page.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -35,7 +35,7 @@ export default function QuizResultsPage({ params }: QuizResultsPageProps) {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <QuizResultsSummary quizId={id} attemptId={attemptId} />
+      <QuizTaker quizId={quizId} attemptId={attemptId} />
     </div>
   )
 }

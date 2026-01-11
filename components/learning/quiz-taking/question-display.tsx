@@ -4,10 +4,10 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { QuizQuestion } from '@/lib/types/generated-content'
+import type { QuestionDTO } from '@/lib/types/learning'
 
 interface QuestionDisplayProps {
-  question: QuizQuestion
+  question: QuestionDTO
   questionNumber: number
   selectedAnswer: number | null
   onAnswerSelect: (optionIndex: number) => void
@@ -35,7 +35,8 @@ export function QuestionDisplay({
 
       {/* Answer Options */}
       <RadioGroup
-        value={selectedAnswer?.toString()}
+        key={question.id} // Force re-render when question changes
+        value={selectedAnswer?.toString() ?? undefined}
         onValueChange={(value) => onAnswerSelect(parseInt(value))}
         disabled={disabled}
         className="space-y-3"
@@ -43,6 +44,7 @@ export function QuestionDisplay({
         {question.options.map((option) => (
           <div
             key={option.index}
+            onClick={() => !disabled && onAnswerSelect(option.index)}
             className={cn(
               'flex items-start space-x-3 rounded-lg border p-4 transition-colors',
               selectedAnswer === option.index && 'bg-muted border-primary',

@@ -9,36 +9,74 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { QuizProgress } from './quiz-progress'
 import { QuestionDisplay } from './question-display'
 import { AnswerFeedback } from './answer-feedback'
-import { useQuizDetail, useStartQuizAttempt, useSubmitAnswer, useCompleteQuizAttempt } from '@/hooks/use-learning'
+import { useQuizDetail, useSubmitAnswer, useCompleteQuizAttempt, useAttemptResults } from '@/hooks/use-learning'
 import type { AnswerFeedback as AnswerFeedbackType } from '@/lib/types/learning'
 
 interface QuizTakerProps {
   quizId: string
+  attemptId: string
 }
 
-export function QuizTaker({ quizId }: QuizTakerProps) {
+export function QuizTaker({ quizId, attemptId }: QuizTakerProps) {
   const router = useRouter()
   const { data: quiz, isLoading: quizLoading, error: quizError } = useQuizDetail(quizId)
-  const startAttemptMutation = useStartQuizAttempt()
+  // Pass quizId to useAttemptResults so it can check the cache before fetching quiz again
+  const { data: attemptDetails, isLoading: attemptLoading } = useAttemptResults(attemptId, quizId)
   const submitAnswerMutation = useSubmitAnswer()
   const completeQuizMutation = useCompleteQuizAttempt()
 
-  const [attemptId, setAttemptId] = useState<string | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<AnswerFeedbackType | null>(null)
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({})
 
-  // Start quiz attempt when quiz loads
+  // Load existing answers when attempt details are fetched
   useEffect(() => {
-    if (quiz && !attemptId) {
-      startAttemptMutation.mutate(quizId, {
-        onSuccess: (attempt) => {
-          setAttemptId(attempt.id)
-        },
-      })
+    // Wait for both quiz and attempt details to load
+    if (!quiz || !attemptDetails || attemptDetails.answers.length === 0) {
+      return
     }
-  }, [quiz, quizId, attemptId, startAttemptMutation])
+
+    console.log('[Quiz Restoration] Starting restoration')
+    console.log('[Quiz Restoration] Attempt details:', attemptDetails)
+    console.log('[Quiz Restoration] Quiz questions:', quiz.questions)
+
+    // CRITICAL: answer.question_position is ALREADY the array index (0, 1, 2...)
+    // It was transformed by the backend DTO mapping layer
+    const answersMap: Record<number, number> = {}
+    attemptDetails.answers.forEach((answer) => {
+      console.log('[Quiz Restoration] Processing answer:', answer)
+      const arrayIndex = answer.question_position
+
+      // Safeguard: Ensure position is within bounds
+      if (arrayIndex >= 0 && arrayIndex < quiz.questions.length) {
+        answersMap[arrayIndex] = answer.selected_option_index
+        console.log(`[Quiz Restoration] Stored answer at array index ${arrayIndex} (option ${answer.selected_option_index})`)
+      } else {
+        console.error(`[Quiz Restoration] ERROR: answer.question_position ${arrayIndex} is out of bounds (quiz has ${quiz.questions.length} questions)`)
+      }
+    })
+    console.log('[Quiz Restoration] Answers map (by array index):', answersMap)
+    setUserAnswers(answersMap)
+
+    // Find the first unanswered question (returns array index)
+    const firstUnanswered = quiz.questions.findIndex((q, arrayIndex) => {
+      const isAnswered = answersMap[arrayIndex] !== undefined
+      console.log(`[Quiz Restoration] Question at array index ${arrayIndex} (position ${q.position}): isAnswered=${isAnswered}`)
+      return !isAnswered
+    })
+    console.log('[Quiz Restoration] First unanswered array index:', firstUnanswered)
+
+    if (firstUnanswered !== -1) {
+      console.log('[Quiz Restoration] Setting current question index to:', firstUnanswered)
+      setCurrentQuestionIndex(firstUnanswered)  // ✅ Use array index directly, no +1!
+      // Clear any selected answer for the new question
+      setSelectedAnswer(null)
+      setFeedback(null)
+    } else {
+      console.log('[Quiz Restoration] All questions answered!')
+    }
+  }, [attemptDetails, quiz])
 
   const currentQuestion = quiz?.questions[currentQuestionIndex]
   const isLastQuestion = currentQuestionIndex === (quiz?.questions.length || 0) - 1
@@ -51,6 +89,8 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
   const handleSubmitAnswer = () => {
     if (!attemptId || selectedAnswer === null || !currentQuestion) return
 
+    console.log('[Submit Answer] Submitting answer for question index:', currentQuestionIndex, 'position:', currentQuestion.position)
+
     submitAnswerMutation.mutate(
       {
         attemptId,
@@ -58,38 +98,45 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
           question_position: currentQuestion.position,
           selected_option_index: selectedAnswer,
         },
+        questionId: currentQuestion.id,
       },
       {
         onSuccess: (feedbackData) => {
+          console.log('[Submit Answer] Success! Feedback:', feedbackData)
           setFeedback(feedbackData)
-          setUserAnswers((prev) => ({
-            ...prev,
-            [currentQuestion.position]: selectedAnswer,
-          }))
+          // ✅ Store answer by ARRAY INDEX (not position) for consistency with progress dots
+          setUserAnswers((prev) => {
+            const updated = {
+              ...prev,
+              [currentQuestionIndex]: selectedAnswer,  // Use array index!
+            }
+            console.log('[Submit Answer] Updated userAnswers:', updated)
+            return updated
+          })
         },
+        onError: (error) => {
+          console.error('[Submit Answer] Error:', error)
+        }
       }
     )
   }
 
   const handleContinue = () => {
     if (isLastQuestion) {
-      // Complete the quiz
       if (!attemptId) return
       completeQuizMutation.mutate(attemptId, {
         onSuccess: (result) => {
-          // Navigate to results page
           router.push(`/dashboard/learning/quiz/${quizId}/results?attemptId=${result.id}`)
         },
       })
     } else {
-      // Move to next question
       setCurrentQuestionIndex((prev) => prev + 1)
       setSelectedAnswer(null)
       setFeedback(null)
     }
   }
 
-  if (quizLoading || startAttemptMutation.isPending) {
+  if (quizLoading || attemptLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
@@ -102,15 +149,13 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
     )
   }
 
-  if (quizError || startAttemptMutation.error) {
+  if (quizError) {
     return (
       <Card>
         <CardContent className="py-12">
           <Alert variant="destructive">
             <AlertDescription>
-              {(quizError as any)?.message ||
-                (startAttemptMutation.error as any)?.message ||
-                'Failed to load quiz. Please try again.'}
+              {(quizError as any)?.message || 'Failed to load quiz. Please try again.'}
             </AlertDescription>
           </Alert>
           <div className="flex justify-center mt-4">
@@ -136,7 +181,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
           <h1 className="text-2xl font-bold">{quiz.title}</h1>
           <p className="text-sm text-muted-foreground">{quiz.product_name}</p>
         </div>
-        <Button onClick={() => router.back()} variant="ghost" size="sm">
+        <Button onClick={() => router.push('/dashboard/learning')} variant="ghost" size="sm">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Exit Quiz
         </Button>
@@ -145,7 +190,11 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
       {/* Quiz Card */}
       <Card>
         <CardHeader>
-          <QuizProgress current={currentQuestionIndex + 1} total={quiz.questions.length} />
+          <QuizProgress
+            current={currentQuestionIndex + 1}
+            total={quiz.questions.length}
+            answeredQuestions={Object.keys(userAnswers).map((k) => parseInt(k))}
+          />
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Question */}
@@ -157,7 +206,7 @@ export function QuizTaker({ quizId }: QuizTakerProps) {
             disabled={!!feedback}
           />
 
-          {/* Submit Button (before feedback) */}
+          {/* Submit Button */}
           {!feedback && (
             <div className="flex justify-end">
               <Button

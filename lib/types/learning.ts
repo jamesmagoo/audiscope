@@ -11,6 +11,96 @@
 
 import type { QuizQuestion } from './generated-content'
 
+// ============================================================================
+// Backend DTOs (Raw API Response Types)
+// ============================================================================
+
+/**
+ * Backend QuizSummaryDTO - Raw response from GET /products/{id}/quizzes
+ * Note: Missing user attempt statistics - requires backend changes
+ */
+export interface QuizSummaryDTO {
+  id: string
+  product_id: string
+  title: string
+  difficulty: string
+  question_count: number
+  quiz_type: string
+  generation_id: string
+  generated_at: string
+  generated_by: string
+  created_at: string
+}
+
+/**
+ * Backend StartQuizAttemptResponse - Raw response from POST /quizzes/{id}/attempts
+ */
+export interface StartQuizAttemptResponse {
+  attempt_id: string  // Note: Backend uses "attempt_id" not "id"
+  quiz_id: string
+  started_at: string
+  status: string
+}
+
+/**
+ * Backend AnswerDTO - Raw response from GET /quiz-attempts/{id}
+ */
+export interface AnswerDTO {
+  id: string
+  question_id: string          // Note: Backend uses UUID, not position number
+  user_answer: number          // Note: Backend uses "user_answer" not "selected_option_index"
+  is_correct: boolean
+  answered_at: string
+  time_taken_seconds: number
+}
+
+/**
+ * Backend CompleteQuizResponse - Raw response from POST /quiz-attempts/{id}/complete
+ */
+export interface CompleteQuizResponse {
+  attempt_id: string           // Note: Backend uses "attempt_id" not "id"
+  status: string
+  score: number
+  correct_answers: number
+  total_questions: number
+  completed_at: string
+  passed: boolean              // Extra field from backend
+}
+
+/**
+ * Backend QuizAttemptDTO - Raw response from GET /quiz-attempts/{id}
+ */
+export interface QuizAttemptDTO {
+  id: string
+  quiz_id: string
+  user_id: string
+  organisation_id: string
+  started_at: string
+  completed_at: string
+  score: number
+  status: string
+  created_at: string
+  answers: AnswerDTO[]
+}
+
+/**
+ * Backend QuestionDTO - Raw question from backend (has id field)
+ * Extended version of QuizQuestion with id
+ */
+export interface QuestionDTO {
+  id: string
+  text: string
+  type: 'multiple_choice' | 'true_false'
+  options: Array<{ index: number; text: string }>
+  correct_answer: number
+  explanation: string
+  position: number
+}
+
+// ============================================================================
+// Frontend Types (Used in Components)
+// ============================================================================
+
 // Quiz attempt status
 export type QuizAttemptStatus = 'in_progress' | 'completed'
 
@@ -93,6 +183,7 @@ export interface LearningQuiz {
 /**
  * Quiz Detail
  * Full quiz data including questions (detail view)
+ * Note: Uses QuestionDTO from backend (has id field unlike QuizQuestion from content-generation)
  */
 export interface QuizDetail {
   id: string
@@ -100,7 +191,7 @@ export interface QuizDetail {
   product_name: string
   title: string
   difficulty: 'beginner' | 'intermediate' | 'advanced'
-  questions: QuizQuestion[]
+  questions: QuestionDTO[]  // Backend returns QuestionDTO with id field
 }
 
 /**
@@ -128,4 +219,87 @@ export interface UserQuizStats {
   total_attempts: number
   average_score?: number
   completion_rate: number
+}
+
+// ============================================================================
+// Transformation Utilities
+// ============================================================================
+
+/**
+ * Transform backend StartQuizAttemptResponse to frontend QuizAttempt
+ */
+export function transformStartAttemptResponse(
+  response: StartQuizAttemptResponse,
+  totalQuestions: number
+): QuizAttempt {
+  return {
+    id: response.attempt_id,  // Map attempt_id → id
+    quiz_id: response.quiz_id,
+    user_id: '',  // Not provided by backend yet
+    started_at: response.started_at,
+    status: response.status as QuizAttemptStatus,
+    total_questions: totalQuestions,
+  }
+}
+
+/**
+ * Transform backend CompleteQuizResponse to frontend QuizAttemptWithAnswers
+ * Note: Backend doesn't include answers array yet, so we pass empty array
+ */
+export function transformCompleteQuizResponse(
+  response: CompleteQuizResponse,
+  quizId: string,
+  startedAt: string,
+  answers: QuizAnswer[] = []
+): QuizAttemptWithAnswers {
+  return {
+    id: response.attempt_id,  // Map attempt_id → id
+    quiz_id: quizId,
+    user_id: '',  // Not provided by backend
+    started_at: startedAt,
+    completed_at: response.completed_at,
+    score: response.score,
+    total_questions: response.total_questions,
+    correct_answers: response.correct_answers,
+    status: response.status as QuizAttemptStatus,
+    answers,
+  }
+}
+
+/**
+ * Transform backend AnswerDTO to frontend QuizAnswer
+ * Note: Requires question lookup to map question_id → position
+ */
+export function transformAnswerDTO(
+  dto: AnswerDTO,
+  questions: Array<{ id: string; position: number }>
+): QuizAnswer {
+  const question = questions.find(q => q.id === dto.question_id)
+  return {
+    question_position: question?.position ?? 0,
+    selected_option_index: dto.user_answer,  // Map user_answer → selected_option_index
+    is_correct: dto.is_correct,
+    answered_at: dto.answered_at,
+  }
+}
+
+/**
+ * Transform backend QuizAttemptDTO to frontend QuizAttemptWithAnswers
+ */
+export function transformQuizAttemptDTO(
+  dto: QuizAttemptDTO,
+  questions: Array<{ id: string; position: number }>
+): QuizAttemptWithAnswers {
+  return {
+    id: dto.id,
+    quiz_id: dto.quiz_id,
+    user_id: dto.user_id,
+    started_at: dto.started_at,
+    completed_at: dto.completed_at,
+    score: dto.score,
+    total_questions: questions.length,  // Calculate from questions
+    correct_answers: dto.answers.filter(a => a.is_correct).length,
+    status: dto.status as QuizAttemptStatus,
+    answers: dto.answers.map(a => transformAnswerDTO(a, questions)),
+  }
 }

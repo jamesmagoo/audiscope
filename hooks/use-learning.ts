@@ -15,7 +15,6 @@ import {
   submitAnswer,
   completeQuizAttempt,
   getAttemptResults,
-  getQuizAttempts,
   getProductQuizStats,
   getUserQuizStats,
   getUserAttempts,
@@ -56,14 +55,26 @@ export function useProductQuizzes(productId: string | null) {
  *
  * Note: This aggregates quizzes from all products since the backend
  * doesn't have a global /quizzes endpoint yet.
+ *
+ * OPTIMIZATION: Checks React Query cache for products before fetching
+ * to avoid duplicate API calls when used alongside useProducts()
  */
 export function useAllQuizzes(status?: 'not_started' | 'in_progress' | 'completed') {
+  const queryClient = useQueryClient()
+
   return useQuery<LearningQuiz[]>({
     queryKey: ['learning', 'quizzes', status],
     queryFn: async () => {
-      // First, fetch all products
-      const { listProducts } = await import('@/lib/product.service')
-      const products = await listProducts()
+      // Check if products are already in cache (from useProducts hook)
+      let products = queryClient.getQueryData<any[]>(['products'])
+
+      if (!products) {
+        console.log('[useAllQuizzes] Products not in cache, fetching...')
+        const { listProducts } = await import('@/lib/product.service')
+        products = await listProducts()
+      } else {
+        console.log('[useAllQuizzes] Using cached products, avoiding duplicate fetch')
+      }
 
       if (!products || products.length === 0) {
         return []
@@ -96,38 +107,53 @@ export function useQuizDetail(quizId: string | null) {
       return getQuizDetail(quizId)
     },
     enabled: !!quizId,
+    staleTime: 1000 * 60 * 5, // Quiz details are stable, cache for 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 }
 
 /**
  * Get quiz attempt results
  * Query key: ['learning', 'attempt', attemptId]
+ *
+ * Note: This hook coordinates with useQuizDetail to avoid duplicate network requests.
+ * It first fetches the attempt, then uses the quiz from cache if available.
+ *
+ * IMPORTANT: Attempt data is frequently updated (user answers questions), so we:
+ * - Use very short staleTime (5 seconds)
+ * - Always refetch on mount (to get latest answers when re-entering quiz)
+ * - Don't refetch on window focus (to avoid unnecessary requests)
  */
-export function useAttemptResults(attemptId: string | null) {
+export function useAttemptResults(attemptId: string | null, quizId?: string | null) {
+  const queryClient = useQueryClient()
+
   return useQuery<QuizAttemptWithAnswers>({
     queryKey: ['learning', 'attempt', attemptId],
-    queryFn: () => {
+    queryFn: async () => {
       if (!attemptId) throw new Error('Attempt ID is required')
-      return getAttemptResults(attemptId)
+
+      // Try to get quiz from cache if quizId is provided
+      let quizData = undefined
+      if (quizId) {
+        quizData = queryClient.getQueryData<QuizDetail>(['learning', 'quiz', quizId])
+        if (quizData) {
+          console.log('[useAttemptResults] Using cached quiz data, avoiding duplicate fetch')
+        }
+      }
+
+      return getAttemptResults(attemptId, quizData)
     },
     enabled: !!attemptId,
+    staleTime: 1000 * 5, // Only cache for 5 seconds (attempt updates frequently)
+    refetchOnMount: true, // ✅ Always refetch when component mounts (re-entering quiz)
+    refetchOnWindowFocus: false, // Don't refetch on every window focus
   })
 }
 
-/**
- * Get all attempts for a specific quiz
- * Query key: ['learning', 'quiz-attempts', quizId]
- */
-export function useQuizAttempts(quizId: string | null) {
-  return useQuery<QuizAttempt[]>({
-    queryKey: ['learning', 'quiz-attempts', quizId],
-    queryFn: () => {
-      if (!quizId) throw new Error('Quiz ID is required')
-      return getQuizAttempts(quizId)
-    },
-    enabled: !!quizId,
-  })
-}
+// Removed useQuizAttempts hook - was causing infinite loop
+// The getQuizAttempts endpoint is not implemented on backend yet
+// If needed in future, re-add with proper retry guards
 
 /**
  * Get quiz statistics for a product
@@ -158,11 +184,19 @@ export function useUserQuizStats() {
 /**
  * Get all quiz attempts for the current user
  * Query key: ['learning', 'user-attempts']
+ *
+ * IMPORTANT: Attempts are frequently updated, so we:
+ * - Use short staleTime (10 seconds)
+ * - Refetch on mount (to detect active attempts when navigating)
+ * - Don't refetch on window focus (avoid excessive requests)
  */
 export function useUserAttempts() {
   return useQuery<QuizAttempt[]>({
     queryKey: ['learning', 'user-attempts'],
     queryFn: getUserAttempts,
+    staleTime: 1000 * 10, // Only cache for 10 seconds (attempts update frequently)
+    refetchOnMount: true, // ✅ Always refetch to detect active attempts
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   })
 }
 
@@ -184,7 +218,7 @@ export function useStartQuizAttempt() {
       // Invalidate quiz lists to update completion status
       queryClient.invalidateQueries({ queryKey: ['learning', 'product-quizzes'] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'quizzes'] })
-      queryClient.invalidateQueries({ queryKey: ['learning', 'quiz-attempts', quizId] })
+      // Removed quiz-attempts invalidation - was causing infinite loop
     },
     onError: (error) => {
       toast({
@@ -206,9 +240,11 @@ export function useSubmitAnswer() {
   return useMutation<
     AnswerFeedback,
     Error,
-    { attemptId: string; answer: AnswerSubmission }
+    { attemptId: string; answer: AnswerSubmission; questionId: string }
   >({
-    mutationFn: ({ attemptId, answer }) => submitAnswer(attemptId, answer),
+    mutationFn: ({ attemptId, answer, questionId }) => submitAnswer(attemptId, answer, questionId),
+    // DON'T invalidate cache here - it causes auto-advance to next question!
+    // The cache will be refreshed on next mount due to refetchOnMount: true
     onError: (error) => {
       toast({
         title: 'Failed to submit answer',
@@ -233,7 +269,7 @@ export function useCompleteQuizAttempt() {
       // Invalidate all quiz-related queries to refresh completion status
       queryClient.invalidateQueries({ queryKey: ['learning', 'product-quizzes'] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'quizzes'] })
-      queryClient.invalidateQueries({ queryKey: ['learning', 'quiz-attempts', data.quiz_id] })
+      // Removed quiz-attempts invalidation - was causing infinite loop
       queryClient.invalidateQueries({ queryKey: ['learning', 'product-stats'] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'user-stats'] })
       queryClient.invalidateQueries({ queryKey: ['learning', 'user-attempts'] })
