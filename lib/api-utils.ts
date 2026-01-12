@@ -213,17 +213,42 @@ export async function makeAuthenticatedRequest(
 export async function handleApiResponse(response: Response): Promise<any> {
   if (!response.ok) {
     let errorMessage = `API Error: ${response.status}`
+    let errorDetails = ''
 
     try {
       const errorData = await response.json()
       errorMessage = errorData.error || errorData.message || errorMessage
+      errorDetails = errorData.details || ''
+
+      // Log the full error for debugging
+      console.error('API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        error: errorMessage,
+        details: errorDetails,
+        fullResponse: errorData
+      })
     } catch {
       // If we can't parse JSON, use the response text
       try {
         const errorText = await response.text()
-        errorMessage = errorText.substring(0, 100) || errorMessage
+        errorMessage = errorText.substring(0, 200) || errorMessage
+        console.error('API Error (non-JSON):', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          text: errorText
+        })
       } catch {
-        // Use the default error message
+        // Use the default error message with better logging
+        errorMessage = `HTTP ${response.status} ${response.statusText || 'Error'}`
+        console.error('API Error (no body):', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          method: 'Unknown'
+        })
       }
     }
 

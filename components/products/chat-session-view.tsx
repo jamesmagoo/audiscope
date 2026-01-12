@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useChatSession, useSendMessage } from '@/hooks/use-product-chat'
+import { useChatSession, useSendMessage } from '@/hooks/use-chat'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, MessageSquareText, BookOpen, GraduationCap, HelpCircle } from 'lucide-react'
 import { Message, type MessageType } from '@/components/assistant/message'
 import { MessageInput } from '@/components/assistant/message-input'
-import type { GetSessionResult, ChatMessage } from '@/lib/product-chat.service'
+import type { GetSessionResult, ChatMessage } from '@/lib/chat.service'
 
 interface ChatSessionViewProps {
   sessionId: string

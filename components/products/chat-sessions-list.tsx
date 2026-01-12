@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useProductChat, useStartSession, useDeleteSession } from '@/hooks/use-product-chat'
+import { useProductChat, useStartSession, useDeleteSession } from '@/hooks/use-chat'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {

@@ -11,7 +11,11 @@ import {
   Package,
   GraduationCap,
   ClipboardCheck,
-  TrendingUp
+  TrendingUp,
+  FileEdit,
+  Settings,
+  Bell,
+  HelpCircle
 } from "lucide-react"
 import {
   Sidebar,
@@ -35,15 +39,19 @@ export function AppSidebar() {
 
   const navItems = [
     { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
-    { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: false },
     { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: false },
-    { name: "NOTTS", href: "/dashboard", icon: Home, disabled: true },
-    { name: "Case Analysis", href: "/dashboard/cases", icon: FileText, disabled: true },
-    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
-    { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true },
-    { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true },
-    { name: "Competency Tracking", href: "/dashboard/competency", icon: ClipboardCheck, disabled: true },
-    { name: "Skill Development", href: "/dashboard/skills", icon: TrendingUp, disabled: true },
+    { name: "Content Management", href: "/dashboard/content", icon: FileEdit, disabled: false },
+    { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true, showDisabled: true },
+    { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true, showDisabled: true },
+    { name: "Notifications", href: "/dashboard/notifications", icon: Bell, disabled: true, showDisabled: true },
+    { name: "Settings", href: "/dashboard/settings", icon: Settings, disabled: true, showDisabled: true },
+    { name: "Help & Support", href: "/dashboard/support", icon: HelpCircle, disabled: true, showDisabled: true },
+    { name: "Training Programs", href: "/dashboard/training", icon: BookOpen, disabled: true, showDisabled: false },
+    { name: "NOTTS", href: "/dashboard", icon: Home, disabled: true, showDisabled: false },
+    { name: "Case Analysis", href: "/dashboard/cases", icon: FileText, disabled: true, showDisabled: false },
+    { name: "Reports", href: "/dashboard/reports", icon: FileText, disabled: true, showDisabled: false },
+    { name: "Competency Tracking", href: "/dashboard/competency", icon: ClipboardCheck, disabled: true, showDisabled: false },
+    { name: "Skill Development", href: "/dashboard/skills", icon: TrendingUp, disabled: true, showDisabled: false },
   ]
 
   return (
@@ -61,27 +69,29 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton
-                asChild={!item.disabled}
-                isActive={!item.disabled && (item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href))}
-                className={item.disabled ? "opacity-50 cursor-not-allowed hover:bg-transparent" : ""}
-              >
-                {item.disabled ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </div>
-                ) : (
-                  <Link href={item.href} onClick={handleNavClick}>
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                )}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {navItems
+            .filter((item) => !item.disabled || item.showDisabled)
+            .map((item) => (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton
+                  asChild={!item.disabled}
+                  isActive={!item.disabled && (item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href))}
+                  className={item.disabled ? "opacity-50 cursor-not-allowed hover:bg-transparent" : ""}
+                >
+                  {item.disabled ? (
+                    <div className="flex items-center gap-2 w-full">
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </div>
+                  ) : (
+                    <Link href={item.href} onClick={handleNavClick}>
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
         </SidebarMenu>
       </SidebarContent>
     </Sidebar>

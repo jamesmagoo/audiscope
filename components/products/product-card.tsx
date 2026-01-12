@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Package, Sparkles, MoreVertical, GraduationCap, BookOpen, MessageSquare, Target, TrendingUp } from 'lucide-react'
-import { useStartSession } from '@/hooks/use-product-chat'
+import { useStartSession } from '@/hooks/use-chat'
 
 interface ProductCardProps {
   productId: string

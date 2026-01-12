@@ -100,15 +100,12 @@ export async function requestUploadURLs(
   files: FileUploadURLRequest[]
 ): Promise<{ uploadURLs: FileUploadURLResponse[] }> {
   try {
-    console.log('requestUploadURLs: Requesting URLs for', files.length, 'files')
-
     const response = await makeAuthenticatedRequest(`${ENDPOINT}/files/upload-urls`, {
       method: 'POST',
       body: JSON.stringify({ files })
     })
 
     const data = await handleApiResponse(response)
-    console.log('requestUploadURLs: Response data:', data)
 
     return data
   } catch (error) {
@@ -134,11 +131,8 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
     })
 
     xhr.addEventListener('load', () => {
-      console.log('uploadToS3: Load event - status:', xhr.status, 'statusText:', xhr.statusText)
-      console.log('uploadToS3: Response:', xhr.responseText)
 
       if (xhr.status >= 200 && xhr.status < 300) {
-        console.log('uploadToS3: Upload successful for', file.name)
         resolve()
       } else {
         console.error('uploadToS3: Upload failed with status', xhr.status, xhr.statusText)
@@ -206,16 +200,12 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
  */
 export async function createProduct( data: CreateProductRequest): Promise<ProductResponse> {
   try {
-    console.log('createProduct: Creating product:', data.name)
-
     const response = await makeAuthenticatedRequest(ENDPOINT, {
       method: 'POST',
       body: JSON.stringify(data)
     })
 
     const product = await handleApiResponse(response)
-    console.log('createProduct: Product created with ID:', product.productID)
-
     return product
   } catch (error) {
     console.error('Error creating product:', error)
@@ -228,15 +218,8 @@ export async function createProduct( data: CreateProductRequest): Promise<Produc
  */
 export async function getProduct(id: string): Promise<ProductResponse> {
   try {
-    console.log('getProduct: Fetching product:', id)
-
     const response = await makeAuthenticatedRequest(`${ENDPOINT}/${id}`)
-
     const product = await handleApiResponse(response)
-    console.log('getProduct: Retrieved product:', product.name)
-    console.log('getProduct: Full response:', product)
-    console.log('getProduct: Files in response:', product.files)
-
     return product
   } catch (error) {
     console.error('Error getting product:', error)
@@ -255,26 +238,14 @@ export async function listProducts( status?: string, limit = 50, offset = 0): Pr
     params.append('offset', offset.toString())
 
     const url = `${ENDPOINT}?${params.toString()}`
-    console.log('listProducts: Making GET request to:', url)
-
     const response = await makeAuthenticatedRequest(url)
-
-    console.log('listProducts: Response status:', response.status)
-
     const data = await handleApiResponse(response)
-    console.log('listProducts: Raw response data:', data)
-    console.log('listProducts: Data type:', typeof data, 'Is array:', Array.isArray(data))
-
-    // Handle different response formats
     if (Array.isArray(data)) {
-      console.log('listProducts: Retrieved', data.length, 'products (direct array)')
       return data
     } else if (data && typeof data === 'object') {
       // Check for common wrapper properties (backend returns { products: [...], total_count: N, ... })
       const products = data.products || data.Products || data.data || data.Data
       if (Array.isArray(products)) {
-        console.log('listProducts: Retrieved', products.length, 'products (from wrapper property)')
-        console.log('listProducts: Total count:', data.total_count || data.totalCount || 'unknown')
         return products
       }
     }

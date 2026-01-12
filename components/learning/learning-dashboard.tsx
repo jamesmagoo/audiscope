@@ -12,11 +12,10 @@ import {
   Award,
   BookOpen,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  FileQuestion
 } from 'lucide-react'
-import { ProgressTracker } from './progress-tracker'
-import { KnowledgeGapsPanel } from './knowledge-gaps-panel'
-import { LearningPathCard } from './learning-path-card'
+import { QuizList } from './quiz-list'
 import Link from 'next/link'
 
 // Dummy data for demonstration
@@ -260,112 +259,38 @@ export function LearningDashboard({ productId }: LearningDashboardProps) {
             <div className="flex-1">
               <h2 className="text-2xl font-bold mb-2">Your Learning Hub</h2>
               <p className="text-muted-foreground mb-4">
-                Track your progress, identify knowledge gaps, and follow personalized learning paths
+                Track your progress, takes quizzes, identify knowledge gaps, and follow personalized learning paths
                 to master medical device products.
               </p>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="default" asChild>
-                  <Link href="/dashboard/training">
-                    Start a Quiz
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/dashboard/products">
-                    Browse Products
-                    <BookOpen className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Target className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeProducts}</p>
-              <p className="text-sm text-muted-foreground">Active Learning</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalGaps}</p>
-              <p className="text-sm text-muted-foreground">Knowledge Gaps</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{learningPaths.filter(p => p.recommended).length}</p>
-              <p className="text-sm text-muted-foreground">Recommended Paths</p>
-            </div>
-          </div>
-        </Card>
-      </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="gaps" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="gaps" className="flex items-center gap-2">
+      <Tabs defaultValue="quizzes" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="quizzes" className="flex items-center gap-2">
+            <FileQuestion className="h-4 w-4" />
+            Quizzes
+          </TabsTrigger>
+          <TabsTrigger value="gaps" className="flex items-center gap-2" disabled>
             <TrendingUp className="h-4 w-4" />
             Knowledge Gaps
-            {criticalGaps > 0 && (
-              <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
-                {criticalGaps}
-              </Badge>
-            )}
           </TabsTrigger>
-          <TabsTrigger value="paths" className="flex items-center gap-2">
+          <TabsTrigger value="paths" className="flex items-center gap-2" disabled>
             <BookOpen className="h-4 w-4" />
             Learning Paths
           </TabsTrigger>
-          <TabsTrigger value="progress" className="flex items-center gap-2">
+          <TabsTrigger value="progress" className="flex items-center gap-2" disabled>
             <Award className="h-4 w-4" />
             Progress
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="gaps" className="mt-6">
-          <KnowledgeGapsPanel gaps={gaps} />
-        </TabsContent>
-
-        <TabsContent value="paths" className="mt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            {learningPaths.map((path) => (
-              <LearningPathCard key={path.id} path={path} />
-            ))}
-          </div>
-          {learningPaths.length === 0 && (
-            <Card className="p-8 text-center">
-              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No learning paths available</h3>
-              <p className="text-sm text-muted-foreground">
-                Start by taking a quiz to generate personalized learning recommendations
-              </p>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="progress" className="mt-6">
-          <ProgressTracker products={progress} />
+        <TabsContent value="quizzes" className="mt-6">
+          <QuizList />
         </TabsContent>
       </Tabs>
     </div>
