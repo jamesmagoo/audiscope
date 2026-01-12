@@ -50,6 +50,20 @@ export function GeneratedContentTable({ onViewContent }: GeneratedContentTablePr
     }
   }
 
+  const getGenerationStatusBadge = (status: string) => {
+    const variants: Record<string, { className: string; label: string }> = {
+      success: { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200', label: 'Success' },
+      partial: { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', label: 'Partial' },
+      failed: { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200', label: 'Failed' },
+    }
+    const config = variants[status] || variants.failed
+    return (
+      <Badge variant="secondary" className={config.className}>
+        {config.label}
+      </Badge>
+    )
+  }
+
   const getStatusBadge = (workflowState: WorkflowState) => {
     const variants: Record<WorkflowState, { className: string; label: string }> = {
       draft: { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200', label: 'Draft' },
@@ -143,7 +157,8 @@ export function GeneratedContentTable({ onViewContent }: GeneratedContentTablePr
               <TableHead>Product</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Difficulty</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Gen Status</TableHead>
+              <TableHead>Workflow</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -164,8 +179,15 @@ export function GeneratedContentTable({ onViewContent }: GeneratedContentTablePr
                 <TableCell className="font-medium">
                   {generation.product_name || 'Unknown Product'}
                 </TableCell>
-                <TableCell>{generation.content.title}</TableCell>
-                <TableCell className="capitalize">{generation.content.difficulty}</TableCell>
+                <TableCell>
+                  {generation.status === 'failed' ? (
+                    <span className="text-muted-foreground italic">Generation failed</span>
+                  ) : (
+                    generation.content?.title || 'Untitled'
+                  )}
+                </TableCell>
+                <TableCell className="capitalize">{generation.content?.difficulty || 'N/A'}</TableCell>
+                <TableCell>{getGenerationStatusBadge(generation.status)}</TableCell>
                 <TableCell>{getStatusBadge(generation.workflow_state)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(generation.created_at), { addSuffix: true })}
@@ -174,6 +196,7 @@ export function GeneratedContentTable({ onViewContent }: GeneratedContentTablePr
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={generation.status === 'failed'}
                     onClick={(e) => {
                       e.stopPropagation()
                       onViewContent?.(generation.id)
