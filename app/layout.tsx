@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
+import { TenantProvider } from "@/components/providers/tenant-provider"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
 import QueryProvider from "@/components/providers/query-provider";
@@ -89,14 +90,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
-        <AuthProvider>
-          <QueryProvider>
-            {children}
-            <SpeedInsights />
-            <Toaster />
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
-          </QueryProvider>
-        </AuthProvider>
+        <TenantProvider>
+          <AuthProvider>
+            <QueryProvider>
+              {children}
+              <SpeedInsights />
+              <Toaster />
+              <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+            </QueryProvider>
+          </AuthProvider>
+        </TenantProvider>
       </ThemeProvider>
       </body>
     </html>
