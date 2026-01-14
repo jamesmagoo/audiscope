@@ -7,7 +7,7 @@
  * - Add files to product after upload
  */
 
-import { makeAuthenticatedRequest, handleApiResponse } from './api-utils'
+import { makeAuthenticatedRequest, handleApiResponse } from '../api-utils'
 
 // ============================================================================
 // API Configuration

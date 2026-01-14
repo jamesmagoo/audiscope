@@ -7,7 +7,7 @@ import {
   type ProductResponse,
   type FileUploadURLRequest,
   type StagedFileInfo
-} from '@/lib/product.service'
+} from '@/lib/service/product.service'
 
 /**
  * Query: Get product by ID

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MessageSquareText, Plus, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { type ChatMessage, type Chat, type ChatResponse } from "@/lib/knowlege-base.service"
+import { type ChatMessage, type Chat, type ChatResponse } from "@/lib/service/knowlege-base.service"
 import { useChat, useChatMessages, useSendMessage, useKnowledgeBaseConfig } from "@/hooks/use-knowledge-base"
 
 interface ChatInterfaceProps {

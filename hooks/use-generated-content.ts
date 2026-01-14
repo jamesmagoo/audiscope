@@ -8,7 +8,7 @@ import {
   contentGenerationApiClient,
   type GenerateQuizRequest,
   type UpdateContentRequest,
-} from '@/lib/content-generation.service'
+} from '@/lib/service/content-generation.service'
 
 /**
  * List all generations for current user (across all products)

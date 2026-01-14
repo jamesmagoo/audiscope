@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import kbClient, { type Chat, type ChatResponse, type ChatMessage } from "@/lib/knowlege-base.service";
+import kbClient, { type Chat, type ChatResponse, type ChatMessage } from "@/lib/service/knowlege-base.service";
 
 export function useChats() {
     return useQuery({

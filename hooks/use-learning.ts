@@ -18,7 +18,7 @@ import {
   getProductQuizStats,
   getUserQuizStats,
   getUserAttempts,
-} from '@/lib/learning.service'
+} from '@/lib/service/learning.service'
 import type {
   LearningQuiz,
   QuizDetail,
@@ -70,7 +70,7 @@ export function useAllQuizzes(status?: 'not_started' | 'in_progress' | 'complete
 
       if (!products) {
         console.log('[useAllQuizzes] Products not in cache, fetching...')
-        const { listProducts } = await import('@/lib/product.service')
+        const { listProducts } = await import('@/lib/service/product.service')
         products = await listProducts()
       } else {
         console.log('[useAllQuizzes] Using cached products, avoiding duplicate fetch')

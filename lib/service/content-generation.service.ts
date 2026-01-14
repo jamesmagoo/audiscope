@@ -3,7 +3,7 @@
  * Based on: docs/api/content-generation-api.md
  */
 
-import { makeAuthenticatedRequest, handleApiResponse } from './api-utils'
+import { makeAuthenticatedRequest, handleApiResponse } from '../api-utils'
 
 // Re-export all types
 export type {
@@ -22,7 +22,7 @@ export type {
   UpdateContentRequest,
   UpdateContentResponse,
   PublishResponse,
-} from './types/generated-content'
+} from '../types/generated-content'
 
 import type {
   GenerateQuizRequest,
@@ -32,7 +32,7 @@ import type {
   UpdateContentRequest,
   UpdateContentResponse,
   PublishResponse,
-} from './types/generated-content'
+} from '../types/generated-content'
 
 // Use Next.js proxy path - all requests go through /api/core which rewrites to backend
 const API_PATH = '/api/core/v1/content'

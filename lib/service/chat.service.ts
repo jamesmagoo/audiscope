@@ -1,4 +1,4 @@
-import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from './api-utils'
+import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from '../api-utils'
 
 // Use Next.js proxy path - all requests go through /api/core which rewrites to backend
 const API_PATH = '/api/core/v1/chat'

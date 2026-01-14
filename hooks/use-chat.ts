@@ -6,7 +6,7 @@ import productChatClient, {
   type GetSessionResult,
   type SendMessageResult,
   type StartSessionResult
-} from '@/lib/chat.service'
+} from '@/lib/service/chat.service'
 
 /**
  * Query: List all chat sessions for a product

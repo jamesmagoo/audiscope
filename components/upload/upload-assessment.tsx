@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { FileAudio, Check, AlertCircle } from "lucide-react"
-import { apiClient, type FileUploadResponse, type AssessmentData } from "@/lib/audio-pipeline-api.service"
+import { apiClient, type FileUploadResponse, type AssessmentData } from "@/lib/service/audio-pipeline-api.service"
 import { useToast } from "@/hooks/use-toast"
 
 // Define the validation schema with Zod
