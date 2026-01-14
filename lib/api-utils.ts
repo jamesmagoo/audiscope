@@ -1,4 +1,4 @@
-import { fetchAuthSession } from "aws-amplify/auth"
+import { getSession } from "next-auth/react"
 import { logJWTClaims } from "./jwt-debug"
 import { AuthenticationError } from "./auth-error"
 
@@ -22,8 +22,8 @@ export function getClientHeaders(): Record<string, string> {
 
 export async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
-    const session = await fetchAuthSession()
-    const token = session.tokens?.accessToken?.toString()
+    const session = await getSession()
+    const token = session?.accessToken
 
     if (!token) {
       throw new AuthenticationError("No access token available")
@@ -45,11 +45,11 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 
 export async function getCurrentUserId(): Promise<string> {
   try {
-    const session = await fetchAuthSession()
-    const userId = session.tokens?.accessToken?.payload?.sub as string
+    const session = await getSession()
+    const userId = session?.user?.id
 
     if (!userId) {
-      throw new AuthenticationError("No user ID available in token")
+      throw new AuthenticationError("No user ID available in session")
     }
 
     return userId
@@ -59,7 +59,7 @@ export async function getCurrentUserId(): Promise<string> {
     if (error instanceof AuthenticationError) {
       throw error
     }
-    throw new AuthenticationError("Failed to get user ID from token", undefined, error as Error)
+    throw new AuthenticationError("Failed to get user ID from session", undefined, error as Error)
   }
 }
 
@@ -69,8 +69,8 @@ export async function getCurrentUserId(): Promise<string> {
  */
 export async function debugJWT(): Promise<void> {
   try {
-    const session = await fetchAuthSession()
-    const token = session.tokens?.accessToken?.toString()
+    const session = await getSession()
+    const token = session?.accessToken
 
     if (!token) {
       console.error('❌ No access token found')
@@ -84,14 +84,14 @@ export async function debugJWT(): Promise<void> {
     logJWTClaims(token)
 
     console.log('---')
-    console.log('📦 Full Token Payload:', session.tokens?.accessToken?.payload)
+    console.log('📦 Full Session:', session)
 
     // Check for custom attributes
-    const payload = session.tokens?.accessToken?.payload as any
     console.log('---')
     console.log('🔍 Checking for custom attributes:')
-    console.log('  organisation_id:', payload?.organisation_id || payload?.['custom:organisation_id'] || '❌ NOT FOUND')
-    console.log('  role:', payload?.role || payload?.['custom:role'] || '❌ NOT FOUND')
+    console.log('  user.id:', session.user?.id || '❌ NOT FOUND')
+    console.log('  user.organisationId:', session.user?.organisationId || '❌ NOT FOUND')
+    console.log('  user.roles:', session.user?.roles || '❌ NOT FOUND')
 
   } catch (error) {
     console.error('Error debugging JWT:', error)
@@ -105,78 +105,35 @@ if (typeof window !== 'undefined') {
 
 /**
  * Make an authenticated API request with automatic token refresh on auth errors
+ * Note: NextAuth handles token refresh automatically, so we don't need manual refresh logic
  */
 export async function makeAuthenticatedRequest(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const makeRequest = async (forceRefresh: boolean = false): Promise<Response> => {
-    try {
-      // Get fresh token if forceRefresh is true
-      const session = await fetchAuthSession(forceRefresh ? { forceRefresh: true } : undefined)
-      const token = session.tokens?.accessToken?.toString()
-
-      if (!token) {
-        throw new AuthenticationError('No access token available')
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...getClientHeaders(), // Include client identification headers
-        ...options.headers,
-      }
-
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      })
-
-      return response
-    } catch (error) {
-      console.error('Request failed:', error)
-      // Re-throw AuthenticationError as-is
-      if (error instanceof AuthenticationError) {
-        throw error
-      }
-      throw error
-    }
-  }
-
   try {
-    // First attempt with current token
-    const response = await makeRequest()
+    const session = await getSession()
+    const token = session?.accessToken
 
-    // If we get 401/403, try refreshing the token once
-    const headers = options.headers as Record<string, string> || {}
-    if ((response.status === 401 || response.status === 403) && !headers['X-Retry-Count']) {
-      console.log('Auth error, attempting token refresh...')
-
-      const retryOptions = {
-        ...options,
-        headers: {
-          ...options.headers,
-          'X-Retry-Count': '1'
-        }
-      }
-
-      // Try refreshing the token
-      const retryResponse = await makeRequest(true)
-
-      // If we still get 401/403 after token refresh, the session is truly invalid
-      if (retryResponse.status === 401 || retryResponse.status === 403) {
-        console.error('Authentication failed after token refresh - session expired')
-        throw new AuthenticationError(
-          'Session expired. Please sign in again.',
-          retryResponse.status
-        )
-      }
-
-      return retryResponse
+    if (!token) {
+      throw new AuthenticationError('No access token available')
     }
 
-    // If we got 401/403 on first try and already retried, throw auth error
-    if ((response.status === 401 || response.status === 403) && headers['X-Retry-Count']) {
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...getClientHeaders(), // Include client identification headers
+      ...options.headers,
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    })
+
+    // If we get 401/403, the session has expired
+    if (response.status === 401 || response.status === 403) {
+      console.error('Authentication failed - session expired')
       throw new AuthenticationError(
         'Session expired. Please sign in again.',
         response.status
@@ -185,9 +142,10 @@ export async function makeAuthenticatedRequest(
 
     return response
   } catch (error) {
+    console.error('Request failed:', error)
+
     // Re-throw AuthenticationError as-is
     if (error instanceof AuthenticationError) {
-      console.error('Authentication failed, user needs to log in again')
       throw error
     }
 

@@ -17,9 +17,7 @@ export const AuthGuard = ({ children, fallback }: AuthGuardProps) => {
     if (!loading && !user) {
       router.push('/login')
     }
-    console.log("Running Auth Guard")
-    console.log(user)
-  }, [user, loading])
+  }, [user, loading, router])
 
   if (loading) {
     return (
