@@ -2,7 +2,7 @@
 
 ## Overview
 
-AudiScope uses Keycloak as its identity provider with NextAuth.js v5 for OAuth2/OIDC authentication. This document describes the authentication architecture, flows, and integration details.
+AudiScope uses Keycloak as its identity provider with NextAuth.js v4 for OAuth2/OIDC authentication. This document describes the authentication architecture, flows, and integration details.
 
 ## Architecture
 
@@ -24,10 +24,10 @@ AudiScope uses Keycloak as its identity provider with NextAuth.js v5 for OAuth2/
 │                      Next.js Backend (Server)                        │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │         /api/auth/[...nextauth]/route.ts                     │  │
-│  │  - NextAuth.js v5 Server                                     │  │
-│  │  - Keycloak Provider                                         │  │
+│  │  - NextAuth.js v4 Server                                     │  │
+│  │  - Keycloak Provider (imports from lib/auth.ts)              │  │
 │  │  - Token Management (Access + Refresh)                       │  │
-│  │  - JWT Callbacks                                             │  │
+│  │  - JWT Callbacks (defined in lib/auth.ts)                    │  │
 │  └──────────┬─────────────────────────────────────┬─────────────┘  │
 └─────────────┼─────────────────────────────────────┼────────────────┘
               │                                      │
@@ -45,12 +45,33 @@ AudiScope uses Keycloak as its identity provider with NextAuth.js v5 for OAuth2/
 
 ### Technology Stack
 
-- **NextAuth.js v5** - Authentication library for Next.js
+- **NextAuth.js v4** - Authentication library for Next.js
 - **Keycloak** - Open-source Identity and Access Management (IAM)
 - **OAuth2 / OIDC** - Industry-standard authentication protocols
 - **JWT** - JSON Web Tokens for stateless authentication
 - **Next.js 15** - React framework with App Router
 - **Next.js Middleware** - Server-side route protection
+
+### Auth Configuration Files
+
+The authentication system is organized across two key files:
+
+**1. `/lib/auth.ts`** - Primary authentication configuration
+- Exports `authOptions: NextAuthOptions` used by NextAuth
+- Configures Keycloak provider with client credentials
+- Defines JWT callback for token refresh logic
+- Defines session callback for user session structure
+- Handles token expiry and automatic refresh (60s buffer)
+- Extracts roles and custom attributes from Keycloak JWT
+- Implements Keycloak logout on signout event
+
+**2. `/app/api/auth/[...nextauth]/route.ts`** - NextAuth API route handler
+- Imports `authOptions` from `/lib/auth.ts`
+- Creates NextAuth handler with: `NextAuth(authOptions)`
+- Exports GET and POST handlers for OAuth2 flow
+- Handles Keycloak OAuth2 callbacks
+
+This separation keeps the configuration centralized and testable, while the route handler remains minimal.
 
 ## Authentication Flows
 
@@ -380,6 +401,9 @@ KEYCLOAK_CLIENT_SECRET=your-client-secret-here
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-nextauth-secret-here
 
+# Backend Core API Configuration
+CORE_API_URL=http://localhost:5002/api
+
 # Keycloak Public Configuration (Client-side - exposed to browser)
 NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
 NEXT_PUBLIC_KEYCLOAK_REALM=audiscope
@@ -392,6 +416,7 @@ NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=audiscope-web
 - Use strong, randomly generated secrets for `NEXTAUTH_SECRET`
 - `NEXT_PUBLIC_*` variables are embedded in client bundle and exposed to browser
 - Only `KEYCLOAK_URL`, `KEYCLOAK_REALM`, and `KEYCLOAK_CLIENT_ID` need to be public for client-side redirects
+- `CORE_API_URL` is used by Next.js rewrites to proxy `/api/core/*` requests to the backend
 
 **Environment Validation:**
 The application validates required environment variables at startup using `lib/env-validation.ts`. Missing variables will cause the app to fail fast with clear error messages.
@@ -456,20 +481,58 @@ NextAuth automatically uses PKCE for OAuth2 flows:
 
 **Server-Side Middleware (CRITICAL)**
 
-The application uses Next.js middleware for server-side route protection:
+The application uses Next.js middleware for server-side route protection. With NextAuth v4, the middleware uses `getToken()` from `next-auth/jwt`:
 
 ```typescript
 // middleware.ts
-export { auth as middleware } from "@/app/api/auth/[...nextauth]/route"
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from "next-auth/jwt"
+
+export default async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // CRITICAL: Skip all NextAuth routes immediately to prevent infinite loops
+  if (pathname.startsWith('/api/auth/')) {
+    return NextResponse.next()
+  }
+
+  // Run NextAuth authentication check using getToken for middleware
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  })
+
+  // Check if accessing protected routes
+  const isProtectedRoute = pathname.startsWith('/dashboard')
+
+  if (isProtectedRoute && !token) {
+    const loginUrl = new URL('/login', request.url)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/api/:path*',
-    '/((?!api/auth).*)',
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, icon.svg (favicons)
+     * - Common static file extensions
+     */
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot)).*)',
   ]
 }
 ```
+
+**Key Points:**
+- Uses `getToken()` from `next-auth/jwt` (NextAuth v4 middleware pattern)
+- Early return for `/api/auth/*` prevents infinite loops
+- Comprehensive matcher pattern excludes static assets automatically
+- Redirects unauthenticated users to `/login` for dashboard routes
+- Note: The actual implementation also includes tenant resolution logic
 
 **Protection Layers:**
 
@@ -525,38 +588,111 @@ window.debugJWT()
 
 ## API Integration
 
+### API Proxy via Next.js Rewrites
+
+The application uses **Next.js rewrites** (not a custom API route) to proxy frontend requests to the backend Core API. This approach automatically forwards all headers including the Authorization header.
+
+**Configuration in `next.config.mjs`:**
+
+```javascript
+async rewrites() {
+  return [
+    {
+      source: '/api/core/:path*',
+      destination: process.env.CORE_API_URL + '/:path*'
+    }
+  ]
+}
+```
+
+**How it works:**
+
+```
+Frontend Request:  fetch('/api/core/v1/products', { headers: { Authorization: 'Bearer ...' }})
+                   ↓
+Next.js Rewrite:   → http://backend-api.com/api/v1/products (headers preserved)
+                   ↓
+Backend Response:  ← Returns data
+                   ↓
+Frontend:          ← Receives response
+```
+
+**Benefits:**
+- ✅ No custom proxy code needed
+- ✅ Automatic header forwarding (including Authorization)
+- ✅ Better performance (direct Next.js handling)
+- ✅ Simpler maintenance
+- ✅ Works with all HTTP methods (GET, POST, PUT, DELETE, PATCH)
+
+**Environment Variable:**
+- `CORE_API_URL` - Backend API base URL (e.g., `http://localhost:5002/api`)
+
 ### Making Authenticated Requests (Client-Side)
 
-Use these utilities in Client Components and browser contexts:
+The recommended pattern for making authenticated requests from Client Components uses `getSession()` from NextAuth to extract the access token.
+
+**Pattern used in service files** (`lib/service/product.service.ts`):
 
 ```typescript
-import { makeAuthenticatedRequest, handleApiResponse } from '@/lib/api-utils'
+import { getSession } from 'next-auth/react'
+import { handleApiResponse } from '../api-utils'
+import { AuthenticationError } from '../auth-error'
 
-// Option 1: Using makeAuthenticatedRequest helper (recommended)
-const response = await makeAuthenticatedRequest('/api/products', {
+async function makeClientAuthRequest(url: string, options: RequestInit = {}): Promise<Response> {
+  // Get current session
+  const session = await getSession()
+  const token = (session as any)?.accessToken
+
+  if (!token) {
+    throw new AuthenticationError("No access token available")
+  }
+
+  // Make request with Authorization header
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  })
+
+  // Handle auth errors
+  if (response.status === 401 || response.status === 403) {
+    throw new AuthenticationError('Session expired. Please sign in again.', response.status)
+  }
+
+  return response
+}
+
+// Example usage
+const response = await makeClientAuthRequest('/api/core/v1/products', {
   method: 'GET'
 })
 const data = await handleApiResponse(response)
+```
 
-// Option 2: Using getAuthHeaders manually
-import { getAuthHeaders } from '@/lib/api-utils'
+**React Query integration** (recommended):
 
-const headers = await getAuthHeaders() // Returns: { Authorization: 'Bearer ...', ... }
-const response = await fetch('/api/products', { headers })
-const data = await response.json()
-
-// Option 3: React Query integration (recommended)
+```typescript
 import { useQuery } from '@tanstack/react-query'
-import { makeAuthenticatedRequest } from '@/lib/api-utils'
 
 const { data, error, isLoading } = useQuery({
   queryKey: ['products'],
   queryFn: async () => {
-    const response = await makeAuthenticatedRequest('/api/products')
+    const response = await makeClientAuthRequest('/api/core/v1/products')
     return handleApiResponse(response)
   }
 })
 ```
+
+**Key Points:**
+- Use `/api/core/...` paths which are proxied to backend via Next.js rewrites
+- Always include `Authorization: Bearer ${token}` header
+- Handle 401/403 errors by throwing `AuthenticationError`
+- Use `handleApiResponse()` for consistent error handling
 
 ### Making Authenticated Requests (Server-Side)
 
@@ -706,9 +842,13 @@ func ValidateKeycloakToken(tokenString string) (*jwt.Token, error) {
    - All AWS Cognito environment variables deprecated
 
 2. **Updated Files**
-   - `app/api/auth/[...nextauth]/route.ts` - New NextAuth configuration
+   - `lib/auth.ts` - NEW: Centralized NextAuth v4 configuration with authOptions
+   - `app/api/auth/[...nextauth]/route.ts` - Route handler (imports from lib/auth.ts)
    - `components/providers/auth-provider.tsx` - Wraps NextAuth SessionProvider
    - `lib/api-utils.ts` - Uses NextAuth session instead of Amplify
+   - `lib/service/*.service.ts` - Updated to use getSession() pattern for API requests
+   - `middleware.ts` - Uses getToken() from next-auth/jwt for auth checks
+   - `next.config.mjs` - Uses Next.js rewrites for API proxying (not custom route)
    - `app/login/page.tsx` - OAuth redirect instead of custom form
    - `app/signup/page.tsx` - Redirects to Keycloak registration
    - `app/forgot-password/page.tsx` - Redirects to Keycloak password reset
@@ -765,6 +905,18 @@ AWS Cognito variables are preserved (commented out) in `.env.local` for referenc
    - Removed aggressive `prompt: "login"` parameter
    - Respects existing Keycloak sessions (SSO)
    - Better user experience for multi-application environments
+
+7. **Centralized Auth Configuration** ✅
+   - Created `/lib/auth.ts` for centralized NextAuth v4 configuration
+   - Separates auth logic from route handler
+   - Token refresh logic with 60-second buffer
+   - Keycloak logout on signout
+
+8. **API Proxy via Next.js Rewrites** ✅
+   - Uses Next.js rewrites instead of custom API route
+   - Automatic header forwarding (including Authorization)
+   - Configuration in `next.config.mjs`
+   - Proxies `/api/core/*` to `CORE_API_URL/*`
 
 ## Testing
 

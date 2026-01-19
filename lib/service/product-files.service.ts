@@ -85,73 +85,44 @@ export interface RequestUploadURLsResponse {
 export async function requestFileUploadURLs(
   files: FileUploadURLRequest[]
 ): Promise<RequestUploadURLsResponse> {
-  try {
-    console.log('requestFileUploadURLs: Requesting upload URLs for files', {
-      fileCount: files.length,
-      files: files.map(f => ({ name: f.fileName, size: f.fileSize, type: f.fileType }))
-    })
+  const response = await makeAuthenticatedRequest(
+    `${CORE_API_BASE}/v1/products/files/upload-urls`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ files })
+    }
+  )
 
-    const response = await makeAuthenticatedRequest(
-      `${CORE_API_BASE}/v1/products/files/upload-urls`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ files })
-      }
-    )
+  const result = await handleApiResponse(response)
 
-    const result = await handleApiResponse(response)
+  // Go backend returns PascalCase (no json tags): UploadURLs
+  const uploadURLs = result.UploadURLs
 
-    // Go backend returns PascalCase (no json tags): UploadURLs
-    const uploadURLs = result.UploadURLs
+  // Validate response structure
+  if (!uploadURLs || !Array.isArray(uploadURLs)) {
+    throw new Error('Invalid response: missing or invalid UploadURLs array')
+  }
 
-    console.log('requestFileUploadURLs: Successfully received upload URLs', {
-      urlCount: uploadURLs?.length,
-      resultKeys: Object.keys(result),
-    })
-
-    // Validate response structure
-    if (!uploadURLs || !Array.isArray(uploadURLs)) {
-      console.error('requestFileUploadURLs: Invalid response structure', {
-        result,
-        type: typeof result,
-        resultKeys: Object.keys(result),
-      })
-      throw new Error('Invalid response: missing or invalid UploadURLs array')
+  // Normalize PascalCase response to camelCase
+  const normalizedURLs: UploadURLResponse[] = uploadURLs.map((url: any, index: number) => {
+    const normalized = {
+      uploadId: url.UploadID || '',
+      fileName: url.FileName || '',
+      stagingKey: url.StagingKey || '',
+      uploadURL: url.UploadURL || '',
+      expiresAt: url.ExpiresAt || '',
     }
 
-    // Normalize PascalCase response to camelCase
-    const normalizedURLs: UploadURLResponse[] = uploadURLs.map((url: any, index: number) => {
-      const normalized = {
-        uploadId: url.UploadID || '',
-        fileName: url.FileName || '',
-        stagingKey: url.StagingKey || '',
-        uploadURL: url.UploadURL || '',
-        expiresAt: url.ExpiresAt || '',
-      }
-
-      // Validate required fields
-      if (!normalized.uploadId || !normalized.stagingKey || !normalized.uploadURL) {
-        console.error('requestFileUploadURLs: Invalid upload URL object', {
-          index,
-          url,
-          normalized,
-        })
-        throw new Error(`Invalid upload URL object at index ${index}: missing required fields`)
-      }
-
-      return normalized
-    })
-
-    console.log('requestFileUploadURLs: Normalized URLs', {
-      count: normalizedURLs.length,
-    })
-
-    return {
-      uploadURLs: normalizedURLs,
+    // Validate required fields
+    if (!normalized.uploadId || !normalized.stagingKey || !normalized.uploadURL) {
+      throw new Error(`Invalid upload URL object at index ${index}: missing required fields`)
     }
-  } catch (error) {
-    console.error('Error in requestFileUploadURLs:', error)
-    throw error
+
+    return normalized
+  })
+
+  return {
+    uploadURLs: normalizedURLs,
   }
 }
 
@@ -178,58 +149,57 @@ export async function uploadFileToS3(
   onProgress?: UploadProgressCallback
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    console.log('uploadFileToS3: Starting upload', {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type
-    })
-
     const xhr = new XMLHttpRequest()
 
-    // Track upload progress
-    xhr.upload.addEventListener('progress', (event) => {
+    // Store event handler references for cleanup (prevent memory leaks)
+    const progressHandler = (event: ProgressEvent) => {
       if (event.lengthComputable && onProgress) {
         const percentComplete = Math.round((event.loaded / event.total) * 100)
         onProgress(percentComplete)
       }
-    })
+    }
 
-    // Handle upload completion
-    xhr.addEventListener('load', () => {
+    const loadHandler = () => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
+
       if (xhr.status >= 200 && xhr.status < 300) {
-        console.log('uploadFileToS3: Upload successful', {
-          fileName: file.name,
-          status: xhr.status
-        })
         resolve()
       } else {
         const error = new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText}`)
-        console.error('uploadFileToS3: Upload failed', {
-          fileName: file.name,
-          status: xhr.status,
-          error: xhr.statusText
-        })
         reject(error)
       }
-    })
+    }
 
-    // Handle network errors
-    xhr.addEventListener('error', () => {
+    const errorHandler = () => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
+
       const error = new Error(`Network error during upload of ${file.name}`)
-      console.error('uploadFileToS3: Network error', {
-        fileName: file.name
-      })
       reject(error)
-    })
+    }
 
-    // Handle upload abort
-    xhr.addEventListener('abort', () => {
+    const abortHandler = () => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
+
       const error = new Error(`Upload aborted for ${file.name}`)
-      console.log('uploadFileToS3: Upload aborted', {
-        fileName: file.name
-      })
       reject(error)
-    })
+    }
+
+    // Cleanup function to remove all event listeners
+    const cleanup = () => {
+      xhr.upload.removeEventListener('progress', progressHandler)
+      xhr.removeEventListener('load', loadHandler)
+      xhr.removeEventListener('error', errorHandler)
+      xhr.removeEventListener('abort', abortHandler)
+    }
+
+    // Attach event listeners
+    xhr.upload.addEventListener('progress', progressHandler)
+    xhr.addEventListener('load', loadHandler)
+    xhr.addEventListener('error', errorHandler)
+    xhr.addEventListener('abort', abortHandler)
 
     // Transform LocalStack URL in development
     let finalUploadURL = uploadURL
@@ -237,10 +207,6 @@ export async function uploadFileToS3(
       const url = new URL(uploadURL)
       const localstackEndpoint = process.env.NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE
       finalUploadURL = uploadURL.replace(url.origin, localstackEndpoint)
-      console.log('uploadFileToS3: Transformed URL for LocalStack', {
-        original: uploadURL,
-        transformed: finalUploadURL
-      })
     }
 
     // Start upload
@@ -303,49 +269,33 @@ export async function addFilesToProduct(
   productId: string,
   stagedFiles: StagedFileInfo[]
 ): Promise<AddFilesToProductResponse> {
-  try {
-    console.log('addFilesToProduct: Adding files to product', {
-      productId,
-      fileCount: stagedFiles.length,
-      files: stagedFiles.map(f => ({ name: f.fileName, type: f.fileType }))
-    })
-
-    // Send camelCase as per Go backend json tags
-    const response = await makeAuthenticatedRequest(
-      `${CORE_API_BASE}/v1/products/${productId}/files`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ stagedFiles })
-      }
-    )
-
-    const result = await handleApiResponse(response)
-
-    // Go backend returns PascalCase (no json tags): ProductID, Files
-    const resultProductId = result.ProductID
-    const files = result.Files || []
-
-    console.log('addFilesToProduct: Successfully added files to product', {
-      productId: resultProductId,
-      fileCount: files.length,
-    })
-
-    // Normalize PascalCase response to camelCase
-    const normalizedFiles: ProductFileInfo[] = files.map((file: any) => ({
-      fileId: file.FileID || '',
-      fileName: file.FileName || '',
-      fileType: (file.FileType as FileType) || 'other',
-      fileSize: file.FileSize || 0,
-      processingStatus: (file.ProcessingStatus as ProcessingStatus) || 'pending',
-    }))
-
-    return {
-      productId: resultProductId,
-      files: normalizedFiles,
+  // Send camelCase as per Go backend json tags
+  const response = await makeAuthenticatedRequest(
+    `${CORE_API_BASE}/v1/products/${productId}/files`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ stagedFiles })
     }
-  } catch (error) {
-    console.error('Error in addFilesToProduct:', error)
-    throw error
+  )
+
+  const result = await handleApiResponse(response)
+
+  // Go backend returns PascalCase (no json tags): ProductID, Files
+  const resultProductId = result.ProductID
+  const files = result.Files || []
+
+  // Normalize PascalCase response to camelCase
+  const normalizedFiles: ProductFileInfo[] = files.map((file: any) => ({
+    fileId: file.FileID || '',
+    fileName: file.FileName || '',
+    fileType: (file.FileType as FileType) || 'other',
+    fileSize: file.FileSize || 0,
+    processingStatus: (file.ProcessingStatus as ProcessingStatus) || 'pending',
+  }))
+
+  return {
+    productId: resultProductId,
+    files: normalizedFiles,
   }
 }
 

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 Development commands:
-- `bun dev` - Start development server with cloud resources (.env.dev-cloud)
+- `bun prod` - Start development server with cloud resources (.env.dev-cloud)
 - `bun local` - Start development server with LocalStack (.env.development)
 - `bun staging` - Start development server with staging environment (.env.staging)
 - `bun run build` - Build for production

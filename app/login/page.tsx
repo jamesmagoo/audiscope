@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react'
 function LoginForm() {
   const [successMessage, setSuccessMessage] = React.useState('')
   const [error, setError] = React.useState('')
+  const [isSigningIn, setIsSigningIn] = React.useState(false)
   const { user, loading, signInUser } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -26,22 +27,29 @@ function LoginForm() {
     const errorParam = searchParams.get('error')
     if (errorParam) {
       setError('Authentication failed. Please try again.')
+      setIsSigningIn(false) // Reset on error
     }
   }, [searchParams])
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
     if (user && !loading) {
-      router.push('/dashboard/products')
+      router.push('/dashboard')
     }
   }, [user, loading, router])
 
   const handleSignIn = async () => {
+    if (isSigningIn) return // Prevent double-clicks
+
+    setIsSigningIn(true)
+    setError('')
+
     try {
       // Use AuthProvider's signInUser method
       await signInUser()
     } catch (error: any) {
       setError('Failed to initiate sign in')
+      setIsSigningIn(false)
     }
   }
 
@@ -87,10 +95,10 @@ function LoginForm() {
           <Button
             onClick={handleSignIn}
             className="w-full"
-            disabled={loading}
+            disabled={loading || isSigningIn}
             size="lg"
           >
-            {loading ? (
+            {(loading || isSigningIn) ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Redirecting to sign in...

@@ -35,11 +35,6 @@ const AuthProviderInner = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession()
   const loading = status === "loading"
 
-  // Log session errors for debugging
-  if (session?.error) {
-    console.error("Session error detected:", session.error)
-  }
-
   // Transform NextAuth session into our User format
   // IMPORTANT: If session has an error or no user, treat as unauthenticated
   const user: User | null = session?.user && !session?.error
@@ -71,7 +66,7 @@ const AuthProviderInner = ({ children }: { children: React.ReactNode }) => {
     // Trigger NextAuth Keycloak OAuth2 flow
     // This will redirect to Keycloak login, then back to the app
     await signIn("keycloak", {
-      callbackUrl: "/dashboard/products",
+      callbackUrl: "/dashboard",
       redirect: true,
     })
   }
@@ -117,7 +112,10 @@ const AuthProviderInner = ({ children }: { children: React.ReactNode }) => {
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
-    <SessionProvider>
+    <SessionProvider
+      refetchInterval={0} // Disable automatic refetching to prevent memory leaks
+      refetchOnWindowFocus={false} // Disable refetch on tab focus
+    >
       <AuthProviderInner>{children}</AuthProviderInner>
     </SessionProvider>
   )

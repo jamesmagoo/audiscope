@@ -1,15 +1,41 @@
-import { makeAuthenticatedRequest, handleApiResponse, getCurrentUserId } from '../api-utils'
+import { handleApiResponse } from '../api-utils'
+import { getSession } from 'next-auth/react'
+import { AuthenticationError } from '../auth-error'
 
 // Use Next.js proxy path - all requests go through /api/core which rewrites to backend
 const API_PATH = '/api/core/v1/products'
 const ENDPOINT = API_PATH
 
-console.log('Product Service Config:', {
-  NODE_ENV: process.env.NODE_ENV,
-  API_PATH,
-  ENDPOINT,
-  USING_PROXY: true
-})
+// Client-side authenticated request helper
+async function makeClientAuthRequest(url: string, options: RequestInit = {}): Promise<Response> {
+  const session = await getSession()
+
+  const token = (session as any)?.accessToken
+
+  if (!token) {
+    throw new AuthenticationError("No access token available")
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  })
+
+  if (response.status === 401 || response.status === 403) {
+    throw new AuthenticationError(
+      'Session expired. Please sign in again.',
+      response.status
+    )
+  }
+
+  return response
+}
 
 // File upload URL request
 export interface FileUploadURLRequest {
@@ -99,19 +125,14 @@ export interface ProductResponse {
 export async function requestUploadURLs(
   files: FileUploadURLRequest[]
 ): Promise<{ uploadURLs: FileUploadURLResponse[] }> {
-  try {
-    const response = await makeAuthenticatedRequest(`${ENDPOINT}/files/upload-urls`, {
-      method: 'POST',
-      body: JSON.stringify({ files })
-    })
+  const response = await makeClientAuthRequest(`${ENDPOINT}/files/upload-urls`, {
+    method: 'POST',
+    body: JSON.stringify({ files })
+  })
 
-    const data = await handleApiResponse(response)
+  const data = await handleApiResponse(response)
 
-    return data
-  } catch (error) {
-    console.error('Error requesting upload URLs:', error)
-    throw error
-  }
+  return data
 }
 
 /**
@@ -122,37 +143,52 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
-    // Track upload progress
-    xhr.upload.addEventListener('progress', (event) => {
+    // Store event handler references for cleanup (prevent memory leaks)
+    const progressHandler = (event: ProgressEvent) => {
       if (event.lengthComputable && onProgress) {
         const percentComplete = Math.round((event.loaded / event.total) * 100)
         onProgress(percentComplete)
       }
-    })
+    }
 
-    xhr.addEventListener('load', () => {
+    const loadHandler = () => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
 
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve()
       } else {
-        console.error('uploadToS3: Upload failed with status', xhr.status, xhr.statusText)
-        console.error('uploadToS3: Response:', xhr.responseText)
         reject(new Error(`Upload failed: ${xhr.status} - ${xhr.statusText}`))
       }
-    })
+    }
 
-    xhr.addEventListener('error', (event) => {
-      console.error('uploadToS3: Network error during upload')
-      console.error('uploadToS3: Error event:', event)
-      console.error('uploadToS3: XHR status:', xhr.status)
-      console.error('uploadToS3: XHR response:', xhr.responseText)
+    const errorHandler = (event: ProgressEvent) => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
+
       reject(new Error('Upload failed due to network error. Check CORS settings.'))
-    })
+    }
 
-    xhr.addEventListener('abort', () => {
-      console.error('uploadToS3: Upload aborted')
+    const abortHandler = () => {
+      // Clean up all event listeners to prevent memory leaks
+      cleanup()
+
       reject(new Error('Upload was aborted'))
-    })
+    }
+
+    // Cleanup function to remove all event listeners
+    const cleanup = () => {
+      xhr.upload.removeEventListener('progress', progressHandler)
+      xhr.removeEventListener('load', loadHandler)
+      xhr.removeEventListener('error', errorHandler)
+      xhr.removeEventListener('abort', abortHandler)
+    }
+
+    // Attach event listeners
+    xhr.upload.addEventListener('progress', progressHandler)
+    xhr.addEventListener('load', loadHandler)
+    xhr.addEventListener('error', errorHandler)
+    xhr.addEventListener('abort', abortHandler)
 
     // Fix LocalStack URL for browser access (development only)
     // In development, backend generates URLs with Docker internal hostnames
@@ -168,7 +204,6 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
       url.protocol = overrideUrl.protocol
       url.host = overrideUrl.host
       fixedURL = url.toString()
-      console.log('uploadToS3: Using S3 endpoint override:', fixedURL)
     } else if (process.env.NODE_ENV === 'development' && uploadURL.includes('.localhost:4566')) {
       // Convert virtual-hosted-style to path-style for LocalStack
       // From: http://bucket.localhost:4566/path
@@ -177,17 +212,11 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
       if (match) {
         const [, protocol, bucket, path] = match
         fixedURL = `${protocol}localhost:4566/${bucket}${path}`
-        console.log('uploadToS3: Converted to path-style URL:', fixedURL)
       } else {
         // Fallback: just replace subdomain
         fixedURL = uploadURL.replace(/https?:\/\/[^/]+\.localhost:4566/, 'http://localhost:4566')
-        console.log('uploadToS3: Transformed Docker URL (fallback):', fixedURL)
       }
     }
-
-    console.log('uploadToS3: Starting upload for', file.name, '(', file.size, 'bytes)')
-    console.log('uploadToS3: Upload URL:', fixedURL)
-    console.log('uploadToS3: File type:', file.type)
 
     xhr.open('PUT', fixedURL)
     xhr.setRequestHeader('Content-Type', file.type)
@@ -199,63 +228,47 @@ export async function uploadToS3( uploadURL: string, file: File, onProgress?: (p
  * Step 3: Create product with staged files
  */
 export async function createProduct( data: CreateProductRequest): Promise<ProductResponse> {
-  try {
-    const response = await makeAuthenticatedRequest(ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    })
+  const response = await makeClientAuthRequest(ENDPOINT, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
 
-    const product = await handleApiResponse(response)
-    return product
-  } catch (error) {
-    console.error('Error creating product:', error)
-    throw error
-  }
+  const product = await handleApiResponse(response)
+  return product
 }
 
 /**
  * Get product by ID (with file status)
  */
 export async function getProduct(id: string): Promise<ProductResponse> {
-  try {
-    const response = await makeAuthenticatedRequest(`${ENDPOINT}/${id}`)
-    const product = await handleApiResponse(response)
-    return product
-  } catch (error) {
-    console.error('Error getting product:', error)
-    throw error
-  }
+  const response = await makeClientAuthRequest(`${ENDPOINT}/${id}`)
+  const product = await handleApiResponse(response)
+  return product
 }
 
 /**
  * List all products
  */
 export async function listProducts( status?: string, limit = 50, offset = 0): Promise<ProductResponse[]> {
-  try {
-    const params = new URLSearchParams()
-    if (status) params.append('status', status)
-    params.append('limit', limit.toString())
-    params.append('offset', offset.toString())
+  const params = new URLSearchParams()
+  if (status) params.append('status', status)
+  params.append('limit', limit.toString())
+  params.append('offset', offset.toString())
 
-    const url = `${ENDPOINT}?${params.toString()}`
-    const response = await makeAuthenticatedRequest(url)
-    const data = await handleApiResponse(response)
-    if (Array.isArray(data)) {
-      return data
-    } else if (data && typeof data === 'object') {
-      // Check for common wrapper properties (backend returns { products: [...], total_count: N, ... })
-      const products = data.products || data.Products || data.data || data.Data
-      if (Array.isArray(products)) {
-        return products
-      }
+  const url = `${ENDPOINT}?${params.toString()}`
+  const response = await makeClientAuthRequest(url)
+  const data = await handleApiResponse(response)
+  if (Array.isArray(data)) {
+    return data
+  } else if (data && typeof data === 'object') {
+    // Check for common wrapper properties (backend returns { products: [...], total_count: N, ... })
+    const products = data.products || data.Products || data.data || data.Data
+    if (Array.isArray(products)) {
+      return products
     }
-
-    console.warn('listProducts: Unexpected response format, returning empty array. Data:', data)
-    return []
-  } catch (error) {
-    console.error('Error listing products:', error)
-    throw error
   }
+
+  return []
 }
 
 /**

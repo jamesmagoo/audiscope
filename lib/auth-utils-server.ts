@@ -1,4 +1,5 @@
-import { auth } from "@/app/api/auth/[...nextauth]/route"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { AuthenticationError } from "./auth-error"
 import { getClientHeaders } from "./api-utils"
 
@@ -8,7 +9,7 @@ import { getClientHeaders } from "./api-utils"
  */
 export async function getServerAuthHeaders(): Promise<Record<string, string>> {
   try {
-    const session = await auth()
+    const session = await getServerSession(authOptions)
     const token = session?.accessToken
 
     if (!token) {
@@ -34,7 +35,7 @@ export async function getServerAuthHeaders(): Promise<Record<string, string>> {
  */
 export async function getServerUserId(): Promise<string> {
   try {
-    const session = await auth()
+    const session = await getServerSession(authOptions)
     const userId = session?.user?.id
 
     if (!userId) {
@@ -56,8 +57,8 @@ export async function getServerUserId(): Promise<string> {
  * Use this in Server Components, Server Actions, and API Routes
  * Returns null if no session exists (user not authenticated)
  */
-export async function getServerSession() {
-  return await auth()
+export async function getServerSessionData() {
+  return await getServerSession(authOptions)
 }
 
 /**
@@ -65,7 +66,7 @@ export async function getServerSession() {
  * Throws AuthenticationError if user is not authenticated
  */
 export async function requireServerAuth() {
-  const session = await auth()
+  const session = await getServerSession(authOptions)
 
   if (!session?.user) {
     throw new AuthenticationError("Authentication required")

@@ -1,6 +1,7 @@
 'use client'
 
 import { useProducts } from '@/hooks/use-products'
+import { useAuth } from '@/components/providers/auth-provider'
 import { Card } from '@/components/ui/card'
 import { Sparkles, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,8 +13,28 @@ import {
 } from '@/components/ui/tooltip'
 
 export function ProductStats() {
-  const { data: products, isLoading } = useProducts()
+  const { user, loading: authLoading } = useAuth()
 
+  // CRITICAL: Only enable fetching if auth is NOT loading AND user exists
+  // This prevents queries from running during initial session hydration
+  const shouldFetch = !authLoading && !!user
+
+  const { data: products, isLoading } = useProducts(undefined, shouldFetch)
+
+  // Wait for auth to complete before showing anything
+  if (authLoading || !user) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {[1, 2].map((i) => (
+          <Card key={i} className="p-4">
+            <Skeleton className="h-16 w-full" />
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  // Show loading skeleton while fetching
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2">

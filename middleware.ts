@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from "@/app/api/auth/[...nextauth]/route"
+import { getToken } from "next-auth/jwt"
 import { TenantService } from '@/lib/tenant/tenant-config'
 
 /**
@@ -14,8 +14,13 @@ export default async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
 
+  // CRITICAL: Skip all NextAuth routes immediately to prevent infinite loops
+  if (pathname.startsWith('/api/auth/')) {
+    return NextResponse.next()
+  }
+
   // Public routes that don't require tenant validation
-  const publicRoutes = ['/', '/api/auth', '/api/health']
+  const publicRoutes = ['/', '/api/health']
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
   // Static assets that don't require tenant validation
@@ -27,78 +32,82 @@ export default async function middleware(request: NextRequest) {
   // Extract tenant from hostname
   const tenantSubdomain = TenantService.getTenantFromHostname(hostname)
 
-  // Skip tenant validation for public routes and static assets
-  if (!isPublicRoute && !isStaticAsset) {
-    // Validate tenant for protected routes
-    if (!tenantSubdomain || !TenantService.isValidTenant(tenantSubdomain)) {
-      console.warn(`Invalid tenant: ${tenantSubdomain} from hostname: ${hostname}`)
-      return NextResponse.redirect(new URL('/tenant-not-found', request.url))
-    }
+  // Early return for static assets - skip all processing
+  if (isStaticAsset) {
+    return NextResponse.next()
+  }
 
-    // Get tenant configuration
-    const tenantConfig = TenantService.getTenantConfig(tenantSubdomain)
-
-    if (!tenantConfig) {
-      console.error(`Tenant config not found for: ${tenantSubdomain}`)
-      return NextResponse.redirect(new URL('/tenant-not-found', request.url))
-    }
-
-    // Run NextAuth authentication check
-    const session = await auth()
-
-    // Check if accessing protected routes
-    const isProtectedRoute = pathname.startsWith('/dashboard')
-
-    if (isProtectedRoute && !session) {
-      // Redirect to login with tenant context preserved
-      const loginUrl = new URL('/login', request.url)
-      const response = NextResponse.redirect(loginUrl)
-
-      // Set tenant cookie before redirect
-      response.cookies.set('tenant', tenantConfig.subdomain, {
+  // For public routes, set tenant cookie if available but don't enforce validation
+  if (isPublicRoute) {
+    if (tenantSubdomain && TenantService.isValidTenant(tenantSubdomain)) {
+      const response = NextResponse.next()
+      response.cookies.set('tenant', tenantSubdomain, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365,
         path: '/'
       })
-
       return response
     }
-
-    // Create response with tenant context
-    const response = NextResponse.next()
-
-    // Add tenant to headers (accessible in server components)
-    response.headers.set('x-tenant-id', tenantConfig.id)
-    response.headers.set('x-tenant-subdomain', tenantConfig.subdomain)
-
-    // Set tenant cookie (accessible in client components)
-    response.cookies.set('tenant', tenantConfig.subdomain, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-      path: '/'
-    })
-
-    return response
+    return NextResponse.next()
   }
 
-  // For public routes, just set tenant cookie if available
-  if (tenantSubdomain && TenantService.isValidTenant(tenantSubdomain)) {
-    const response = NextResponse.next()
-    response.cookies.set('tenant', tenantSubdomain, {
+  // Validate tenant exists
+  if (!tenantSubdomain || !TenantService.isValidTenant(tenantSubdomain)) {
+    return NextResponse.redirect(new URL('/tenant-not-found', request.url))
+  }
+
+  // Get tenant configuration
+  const tenantConfig = TenantService.getTenantConfig(tenantSubdomain)
+
+  if (!tenantConfig) {
+    return NextResponse.redirect(new URL('/tenant-not-found', request.url))
+  }
+
+  // Run NextAuth authentication check using getToken for middleware
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  })
+
+  // Check if accessing protected routes
+  const isProtectedRoute = pathname.startsWith('/dashboard')
+
+  if (isProtectedRoute && !token) {
+    // Redirect to login with tenant context preserved
+    const loginUrl = new URL('/login', request.url)
+    const response = NextResponse.redirect(loginUrl)
+
+    // Set tenant cookie before redirect
+    response.cookies.set('tenant', tenantConfig.subdomain, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 365,
       path: '/'
     })
+
     return response
   }
 
-  return NextResponse.next()
+  // Create response with tenant context
+  const response = NextResponse.next()
+
+  // Add tenant to headers (accessible in server components)
+  response.headers.set('x-tenant-id', tenantConfig.id)
+  response.headers.set('x-tenant-subdomain', tenantConfig.subdomain)
+
+  // Set tenant cookie (accessible in client components)
+  response.cookies.set('tenant', tenantConfig.subdomain, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 365, // 1 year
+    path: '/'
+  })
+
+  return response
 }
 
 /**
