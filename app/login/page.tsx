@@ -98,7 +98,7 @@ function LoginForm() {
             disabled={loading || isSigningIn}
             size="lg"
           >
-            {(loading || isSigningIn) ? (
+            {isSigningIn ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Redirecting to sign in...
