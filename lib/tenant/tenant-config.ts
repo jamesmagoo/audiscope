@@ -28,17 +28,18 @@ export interface TenantConfig {
 
 // Tenant registry - in production, this could be loaded from database/API
 const TENANT_REGISTRY: Record<string, TenantConfig> = {
-  'customer1': {
-    id: 'customer1',
-    subdomain: 'customer1',
-    keycloakRealm: 'customer1-realm',
-    keycloakClientId: 'customer1-web',
-    keycloakClientSecret: process.env.KEYCLOAK_CUSTOMER1_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || '',
-    name: 'Acme Medical',
+  // Demo/Development tenant
+  'audiscope': {
+    id: 'audiscope',
+    subdomain: 'audiscope',
+    keycloakRealm: 'audiscope',
+    keycloakClientId: process.env.KEYCLOAK_CLIENT_ID || 'audiscope-web',
+    keycloakClientSecret: process.env.KEYCLOAK_CLIENT_SECRET || '',
+    name: 'DEMO',  // Sub-heading shown in sidebar
     branding: {
-      logo: '/tenants/customer1/logo.svg',
-      primaryColor: '#4F46E5',
-      appName: 'Acme Learning Portal'
+      logo: '/logo.svg',
+      primaryColor: '#3B82F6',
+      appName: 'Landy AI'
     },
     features: {
       aiAssistant: true,
@@ -46,36 +47,18 @@ const TENANT_REGISTRY: Record<string, TenantConfig> = {
       analytics: true
     }
   },
-  'customer2': {
-    id: 'customer2',
-    subdomain: 'customer2',
-    keycloakRealm: 'customer2-realm',
-    keycloakClientId: 'customer2-web',
-    keycloakClientSecret: process.env.KEYCLOAK_CUSTOMER2_SECRET || process.env.KEYCLOAK_CLIENT_SECRET || '',
-    name: 'BioTech Corp',
-    branding: {
-      logo: '/tenants/customer2/logo.svg',
-      primaryColor: '#10B981',
-      appName: 'BioTech Training'
-    },
-    features: {
-      aiAssistant: true,
-      productHub: false,
-      analytics: true
-    }
-  },
-  // Development fallback tenant (uses existing audiscope realm)
-  'audiscope': {
-    id: 'audiscope',
-    subdomain: 'audiscope',
-    keycloakRealm: 'audiscope',
-    keycloakClientId: process.env.KEYCLOAK_CLIENT_ID || 'audiscope-web',
+  // Uniphar customer tenant
+  'uniphar': {
+    id: 'uniphar',
+    subdomain: 'uniphar',
+    keycloakRealm: 'uniphar',  // Keycloak realm name
+    keycloakClientId: process.env.KEYCLOAK_CLIENT_ID || 'uniphar-web',
     keycloakClientSecret: process.env.KEYCLOAK_CLIENT_SECRET || '',
-    name: 'Landy AI',
+    name: 'Uniphar',  // Sub-heading shown in sidebar
     branding: {
-      logo: '/logo.svg',
-      primaryColor: '#3B82F6',
-      appName: 'Landy AI'
+      logo: '/tenants/uniphar/logo.svg',
+      primaryColor: '#10B981',
+      appName: 'Uniphar Learning Portal'
     },
     features: {
       aiAssistant: true,

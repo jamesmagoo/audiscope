@@ -57,6 +57,8 @@ export const authOptions: NextAuthOptions = {
       issuer: process.env.KEYCLOAK_ISSUER,
     }),
   ],
+  // Enable dynamic subdomain handling for multi-tenant setup
+  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days

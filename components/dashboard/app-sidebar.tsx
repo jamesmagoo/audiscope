@@ -26,10 +26,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useTenant } from "@/components/providers/tenant-provider"
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { setOpenMobile, isMobile } = useSidebar()
+  const { tenant } = useTenant()
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -64,6 +66,11 @@ export function AppSidebar() {
           <div className="flex flex-col min-w-0">
             <span className="text-lg font-bold leading-tight">Landy AI</span>
             <span className="text-[10px] text-muted-foreground leading-tight">Learning & Development</span>
+            {tenant && (
+              <span className="text-[9px] text-muted-foreground/70 leading-tight font-medium">
+                {tenant.name}
+              </span>
+            )}
           </div>
         </Link>
       </SidebarHeader>
