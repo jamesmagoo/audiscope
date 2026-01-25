@@ -1,6 +1,7 @@
 'use client'
 
 import { useProducts } from '@/hooks/use-products'
+import { useAuth } from '@/components/providers/auth-provider'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Package, Sparkles, MessageSquare, BookOpen } from 'lucide-react'
@@ -14,8 +15,30 @@ interface ProductListProps {
 }
 
 export function ProductList({ searchTerm, category, sortBy }: ProductListProps) {
-  const { data: products, isLoading, error } = useProducts()
+  const { user, loading: authLoading } = useAuth()
 
+  // CRITICAL: Only enable fetching if auth is NOT loading AND user exists
+  // This prevents queries from running during initial session hydration
+  const shouldFetch = !authLoading && !!user
+
+  const { data: products, isLoading, error } = useProducts(undefined, shouldFetch)
+
+  // Wait for auth to complete before showing content
+  if (authLoading || !user) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-20 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  // Show loading skeleton while fetching
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -128,7 +151,6 @@ export function ProductList({ searchTerm, category, sortBy }: ProductListProps) 
 
         // Skip products without valid IDs
         if (!productId) {
-          console.warn('ProductList: Product missing ID, skipping:', product)
           return null
         }
 

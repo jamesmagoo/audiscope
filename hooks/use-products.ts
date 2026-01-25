@@ -7,7 +7,7 @@ import {
   type ProductResponse,
   type FileUploadURLRequest,
   type StagedFileInfo
-} from '@/lib/product.service'
+} from '@/lib/service/product.service'
 
 /**
  * Query: Get product by ID
@@ -16,64 +16,50 @@ export function useProduct(id: string | null) {
   return useQuery({
     queryKey: ['product', id],
     queryFn: () => {
-      console.log('useProduct: queryFn called at', new Date().toISOString())
       return id ? productApiClient.getProduct(id) : null
     },
     enabled: !!id,
-    staleTime: 0, // Disable staleness for debugging
+    staleTime: 0,
     refetchInterval: (query) => {
-      // Poll every 5 seconds if files are still processing
-      // Stop polling when all files are in terminal states (completed or failed)
       const data = query.state.data
-
-      // Debug logging
-      console.log('useProduct refetchInterval check:', {
-        timestamp: new Date().toISOString(),
-        hasData: !!data,
-        filesCount: data?.files?.length || 0,
-        files: data?.files
-      })
+      const dataUpdatedAt = query.state.dataUpdatedAt
 
       if (!data?.files || data.files.length === 0) {
-        console.log('useProduct: No files, not polling')
+        return false
+      }
+
+      // Stop polling after 2 minutes to prevent memory leaks
+      const POLLING_TIMEOUT_MS = 2 * 60 * 1000
+      if (dataUpdatedAt && Date.now() - dataUpdatedAt > POLLING_TIMEOUT_MS) {
         return false
       }
 
       const hasActiveProcessingFiles = data.files.some((f: any) => {
         const status = f.processing_status || f.processingStatus || f.ProcessingStatus
-        const isActive = status === 'pending' || status === 'processing'
-        console.log('File status check:', {
-          fileName: f.file_name || f.fileName || f.FileName,
-          fileType: f.file_type || f.fileType || f.FileType,
-          status,
-          isActive
-        })
-        // Only return true for pending/processing, NOT for failed or completed
-        return isActive
+        return status === 'pending' || status === 'processing'
       })
 
-      const interval = hasActiveProcessingFiles ? 5000 : false
-      console.log('useProduct refetchInterval result:', { hasActiveProcessingFiles, interval })
-
-      return interval
-    }
+      return hasActiveProcessingFiles ? 5000 : false
+    },
+    // CRITICAL: Stop polling when component unmounts to prevent memory leaks
+    refetchIntervalInBackground: false
   })
 }
 
 /**
  * Query: List all products
+ * @param status - Optional status filter
+ * @param enabled - Whether the query should run (default: true). Set to false to prevent fetching.
  */
-export function useProducts(status?: string) {
+export function useProducts(status?: string, enabled = true) {
   return useQuery({
     queryKey: ['products', status],
     queryFn: async () => {
-      console.log('useProducts: Fetching products...')
       const result = await productApiClient.listProducts(status)
-      console.log('useProducts: Result type:', typeof result, 'Is array:', Array.isArray(result))
-      console.log('useProducts: Result:', result)
       return result
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled, // Only run query if enabled is true
   })
 }
 
@@ -144,7 +130,6 @@ export function useCreateProductWithFiles() {
       onFileProgress?: (fileName: string, percent: number) => void
     ): Promise<ProductResponse> {
       // Step 1: Request upload URLs
-      console.log('useCreateProductWithFiles: Requesting upload URLs for', files.length, 'files')
       const uploadURLsResponse = await requestUploadURLs.mutateAsync(
         files.map(({ file, fileType }) => ({
           fileName: file.name,
@@ -154,19 +139,15 @@ export function useCreateProductWithFiles() {
         }))
       )
 
-      console.log('useCreateProductWithFiles: Upload URLs response:', uploadURLsResponse)
-
       // Handle different response structures (camelCase or PascalCase)
       const response: any = uploadURLsResponse
       const uploadURLs = response?.uploadURLs || response?.UploadURLs || response
 
       if (!uploadURLs || !Array.isArray(uploadURLs)) {
-        console.error('Invalid upload URLs response:', uploadURLsResponse)
         throw new Error('Failed to get upload URLs from server')
       }
 
       // Step 2: Upload all files to S3
-      console.log('useCreateProductWithFiles: Uploading files to S3')
       const stagedFiles: StagedFileInfo[] = []
 
       for (let i = 0; i < files.length; i++) {
@@ -198,7 +179,6 @@ export function useCreateProductWithFiles() {
       }
 
       // Step 3: Create product with staged files
-      console.log('useCreateProductWithFiles: Creating product with', stagedFiles.length, 'staged files')
       return await createProduct.mutateAsync({
         ...productData,
         stagedFiles,

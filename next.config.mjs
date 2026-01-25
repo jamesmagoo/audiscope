@@ -11,6 +11,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Allow cross-origin requests from tenant subdomains in development
+  allowedDevOrigins: [
+    'localhost:3000',
+    'audiscope.localhost:3000',
+    'uniphar.localhost:3000',
+  ],
   async rewrites() {
     return [
       {

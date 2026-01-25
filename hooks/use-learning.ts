@@ -18,7 +18,7 @@ import {
   getProductQuizStats,
   getUserQuizStats,
   getUserAttempts,
-} from '@/lib/learning.service'
+} from '@/lib/service/learning.service'
 import type {
   LearningQuiz,
   QuizDetail,
@@ -69,11 +69,8 @@ export function useAllQuizzes(status?: 'not_started' | 'in_progress' | 'complete
       let products = queryClient.getQueryData<any[]>(['products'])
 
       if (!products) {
-        console.log('[useAllQuizzes] Products not in cache, fetching...')
-        const { listProducts } = await import('@/lib/product.service')
+        const { listProducts } = await import('@/lib/service/product.service')
         products = await listProducts()
-      } else {
-        console.log('[useAllQuizzes] Using cached products, avoiding duplicate fetch')
       }
 
       if (!products || products.length === 0) {
@@ -137,9 +134,6 @@ export function useAttemptResults(attemptId: string | null, quizId?: string | nu
       let quizData = undefined
       if (quizId) {
         quizData = queryClient.getQueryData<QuizDetail>(['learning', 'quiz', quizId])
-        if (quizData) {
-          console.log('[useAttemptResults] Using cached quiz data, avoiding duplicate fetch')
-        }
       }
 
       return getAttemptResults(attemptId, quizData)

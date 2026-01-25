@@ -31,7 +31,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { useAddFilesToProductFlow, type FileWithProgress } from '@/hooks/use-product-files'
-import type { FileType } from '@/lib/product-files.service'
+import type { FileType } from '@/lib/service/product-files.service'
 
 // ============================================================================
 // Constants

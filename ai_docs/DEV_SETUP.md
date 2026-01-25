@@ -6,10 +6,10 @@ Quick-start guide for setting up your development environment with real AWS reso
 
 Before you begin, ensure you have:
 
-- **Node.js** 18+ and **pnpm** installed
+- **Node.js** 18+ and **bun** installed
 - **Python 3** (for LocalStack, optional)
 - **AWS CLI** (optional, for testing LocalStack)
-- Access to AudiScope AWS resources (Cognito, API Gateway, etc.)
+- Access to AudiScope AWS resources (Keycloak, API Gateway, etc.)
 - Backend API deployed or running locally
 
 ## Quick Setup (Automated)
@@ -24,10 +24,9 @@ The fastest way to get started is using the setup script:
 # Press Enter to accept default values or provide your own
 ```
 
-This creates three environment files locally:
+This creates two environment files locally:
 - `.env.dev-cloud` - Cloud development (recommended)
 - `.env.development` - Local development with LocalStack
-- `.env.staging` - Staging environment
 
 **Note:** These files are gitignored and will NOT be committed for security.
 
@@ -43,10 +42,6 @@ Best for: Team collaboration, daily development, real AWS testing, integration w
 
 Best for: Offline development, feature work, testing without AWS costs
 
-### Option 3: Staging Environment Testing
-
-Best for: Pre-production testing, staging verification, final QA
-
 ---
 
 ## Option 1: Development with All Cloud Resources
@@ -55,7 +50,7 @@ Best for: Pre-production testing, staging verification, final QA
 
 ```bash
 # Install Node.js dependencies
-pnpm install
+bun install
 ```
 
 ### Step 2: Verify Backend is Accessible (Optional)
@@ -76,7 +71,7 @@ If the backend is not accessible:
 
 ```bash
 # Start Next.js development server (automatically uses .env.dev-cloud)
-pnpm dev
+bun prod
 ```
 
 This command automatically loads `.env.dev-cloud` with:
@@ -121,7 +116,7 @@ The application will be available at: **http://localhost:3000**
 
 ```bash
 # Install Node.js dependencies
-pnpm install
+bun install
 
 # Install LocalStack (for local S3 emulation)
 pip install localstack
@@ -165,7 +160,7 @@ docker-compose up
 
 ```bash
 # Start Next.js development server (automatically uses .env.development)
-pnpm local
+bun local
 ```
 
 This command automatically loads `.env.development` with:
@@ -196,78 +191,33 @@ The application will be available at: **http://localhost:3000**
 
 ---
 
-## Option 3: Staging Environment Testing
-
-### Step 1: Install Dependencies
-
-```bash
-# Install Node.js dependencies
-pnpm install
-```
-
-### Step 2: Update Staging Configuration
-
-Before using staging, ensure `.env.staging` has the correct Core API URL:
-
-```bash
-# Edit .env.staging if needed
-nano .env.staging
-
-# Update these lines with your staging API URL:
-# NEXT_PUBLIC_API_URL=https://api-staging.audiscope.com
-# NEXT_PUBLIC_CORE_API_URL=https://api-staging.audiscope.com/api
-```
-
-**Important:** Make sure `NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE` is NOT set in `.env.staging`.
-
-### Step 3: Verify AWS Resources
-
-Ensure you have access to:
-- ✅ AWS Cognito User Pool (for authentication)
-- ✅ AWS API Gateway (for audio assessments)
-- ✅ Deployed Staging Core API (for products and files)
-- ✅ AWS S3 Buckets (via backend presigned URLs)
-- ✅ AWS Bedrock Knowledge Base (for AI chat)
-
-### Step 4: Start Frontend
-
-```bash
-# Start Next.js development server (automatically uses .env.staging)
-pnpm staging
-```
-
-The application will be available at: **http://localhost:3000**
-
-### Step 5: Verify Setup
-
-1. **Open browser:** Navigate to http://localhost:3000
-2. **Check console:** Look for startup logs showing real AWS endpoints
-3. **Test authentication:** Login with your AWS Cognito credentials
-4. **Test file upload:** Upload a file to verify S3 presigned URLs work
-5. **Check Network tab:** Verify requests are going to real AWS endpoints
-
----
-
 ## Environment Variables Reference
 
 ### Core Variables (Required)
 
-| Variable | Description | Dev-Cloud | LocalStack Dev | Staging/Prod |
-|----------|-------------|-----------|----------------|--------------|
-| `NEXT_PUBLIC_AWS_REGION` | AWS region | `eu-west-1` | `eu-west-1` | `eu-west-1` |
-| `NEXT_PUBLIC_USER_POOL_ID` | Cognito User Pool ID | `eu-west-1_90PVu1scA` | Same | Same |
-| `NEXT_PUBLIC_USER_POOL_CLIENT_ID` | Cognito Client ID | `4o01ocufgcskol74rr8cim7afq` | Same | Same |
-| `NEXT_PUBLIC_API_GATEWAY_URL` | Audio pipeline API | AWS Gateway URL | AWS Gateway URL | AWS Gateway URL |
-| `NEXT_PUBLIC_API_URL` | Core API base URL | Dev ALB URL | `http://localhost:5002` | `https://api.example.com` |
-| `NEXT_PUBLIC_CORE_API_URL` | Core API with path | Dev ALB URL + `/api` | `http://localhost:5002/api` | `https://api.example.com/api` |
-| `NEXT_PUBLIC_KNOWLEDGE_BASE_ID` | Bedrock KB ID | `5WDOTFQ8QC` | `5WDOTFQ8QC` | `5WDOTFQ8QC` |
+| Variable | Description | Dev-Cloud | LocalStack Dev |
+|----------|-------------|-----------|----------------|
+| `KEYCLOAK_ISSUER` | Keycloak issuer URL | `http://localhost:8080/realms/audiscope` | Same |
+| `KEYCLOAK_CLIENT_ID` | Keycloak client ID | `audiscope-web` | Same |
+| `KEYCLOAK_CLIENT_SECRET` | Keycloak client secret | From Keycloak | Same |
+| `NEXTAUTH_URL` | NextAuth base URL | `http://audiscope.localhost:3000` | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | NextAuth secret | Generated secret | Same |
+| `NEXT_PUBLIC_KEYCLOAK_URL` | Public Keycloak URL | `http://localhost:8080` | Same |
+| `NEXT_PUBLIC_KEYCLOAK_REALM` | Public Keycloak realm | `audiscope` | Same |
+| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | Public Keycloak client | `audiscope-web` | Same |
+| `NEXT_PUBLIC_API_GATEWAY_URL` | Audio pipeline API | AWS Gateway URL | AWS Gateway URL |
+| `CORE_API_URL` | Core API for rewrites (server-side) | Dev ALB URL + `/api` | `http://localhost:5002/api` |
+| `NEXT_PUBLIC_KNOWLEDGE_BASE_ID` | Bedrock KB ID | `5WDOTFQ8QC` | `5WDOTFQ8QC` |
+| `DEV_TENANT` | Default tenant for localhost | `audiscope` | `audiscope` |
+
+**Note:** Core API calls use Next.js proxy routes (`/api/core/*`) that rewrite to `CORE_API_URL` server-side. Backend URL is never exposed to browser.
 
 ### Optional Variables
 
 | Variable | Description | When to Use |
 |----------|-------------|-------------|
 | `NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE` | LocalStack S3 endpoint | Local dev with LocalStack only |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking | Production/staging monitoring |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry error tracking | Production monitoring |
 | `SENTRY_AUTH_TOKEN` | Sentry source maps | Production builds |
 
 ---
@@ -279,7 +229,7 @@ Environment switching is now automatic - just use the corresponding npm script:
 ### Switch to Dev-Cloud (All Cloud Resources)
 
 ```bash
-pnpm dev
+bun prod
 ```
 
 Uses `.env.dev-cloud` automatically - all cloud resources, no manual configuration needed.
@@ -291,20 +241,12 @@ Uses `.env.dev-cloud` automatically - all cloud resources, no manual configurati
 localstack start
 
 # In another terminal:
-pnpm local
+bun local
 ```
 
 Uses `.env.development` automatically with LocalStack S3 and local backend.
 
-### Switch to Staging Environment
-
-```bash
-pnpm staging
-```
-
-Uses `.env.staging` automatically for staging/production AWS resources.
-
-**No more manual copying of `.env` files!** Each command automatically uses its corresponding environment configuration.
+**Note:** Each command automatically uses its corresponding environment configuration via `dotenv-cli`.
 
 ---
 
@@ -312,18 +254,18 @@ Uses `.env.staging` automatically for staging/production AWS resources.
 
 ### Issue: "API endpoint not configured"
 
-**Cause:** Missing `NEXT_PUBLIC_API_GATEWAY_URL` in `.env.local`
+**Cause:** Missing `NEXT_PUBLIC_API_GATEWAY_URL` in your environment file
 
 **Solution:**
 ```bash
-# Check if variable is set
-grep NEXT_PUBLIC_API_GATEWAY_URL .env.local
+# Check if variable is set in .env.dev-cloud
+grep NEXT_PUBLIC_API_GATEWAY_URL .env.dev-cloud
 
 # If missing, add it:
-echo "NEXT_PUBLIC_API_GATEWAY_URL=https://your-gateway-url" >> .env.local
+echo "NEXT_PUBLIC_API_GATEWAY_URL=https://your-gateway-url" >> .env.dev-cloud
 
 # Restart dev server
-pnpm dev
+bun prod
 ```
 
 ### Issue: File upload fails with CORS error
@@ -341,11 +283,12 @@ pnpm dev
 ### Issue: Authentication fails (401/403)
 
 **Solution:**
-1. Verify Cognito credentials in `.env.local`
-2. Clear browser localStorage: `localStorage.clear()`
-3. Clear browser cookies for localhost
-4. Try logging in again
-5. Check browser console for specific auth errors
+1. Verify Keycloak credentials in your environment file
+2. Ensure Keycloak is running on `localhost:8080`
+3. Clear browser localStorage: `localStorage.clear()`
+4. Clear browser cookies for localhost
+5. Try logging in again
+6. Check browser console for specific auth errors
 
 ### Issue: Backend connection refused
 
@@ -364,8 +307,8 @@ cd ../audiscope-backend
 # Test backend connectivity
 curl https://api-dev.audiscope.com/api/health
 
-# Check if URL in .env.local is correct
-grep NEXT_PUBLIC_CORE_API_URL .env.local
+# Check if URL in .env.dev-cloud is correct
+grep CORE_API_URL .env.dev-cloud
 ```
 
 ### Issue: LocalStack S3 upload fails
@@ -378,8 +321,8 @@ localstack start --debug
 # Check LocalStack S3 service status
 aws --endpoint-url=http://localhost:4566 s3 ls
 
-# Verify environment variable is set
-grep S3_ENDPOINT_OVERRIDE .env.local
+# Verify environment variable is set in .env.development
+grep S3_ENDPOINT_OVERRIDE .env.development
 
 # Should output:
 # NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE=http://localhost:4566
@@ -402,11 +345,11 @@ AudiScope uses a **dual backend architecture**:
 - **Purpose:** Product and file management
 - **Tech:** Go backend (or your backend stack)
 - **Used for:** Products, files, knowledge base, chat
-- **Endpoint:** `NEXT_PUBLIC_CORE_API_URL`
-- **Service files:** `lib/product.service.ts`, `lib/product-files.service.ts`
+- **Endpoint:** `/api/core/*` (proxied to `CORE_API_URL`)
+- **Service files:** `lib/service/product.service.ts`, `lib/service/product-files.service.ts`
 
 **Both backends:**
-- Use JWT authentication from AWS Cognito
+- Use JWT authentication from Keycloak via NextAuth
 - Automatically include `Authorization: Bearer <token>` headers
 - Support automatic token refresh on expiration
 
@@ -420,7 +363,7 @@ AudiScope uses a **dual backend architecture**:
 
 ```bash
 # Just start and go!
-pnpm dev
+bun prod
 ```
 
 That's it! All backend services are already running in the cloud. Develop and test at http://localhost:3000
@@ -435,7 +378,7 @@ localstack start
 cd ../backend && go run main.go
 
 # Terminal 3: Start Frontend
-pnpm local
+bun local
 ```
 
 Develop and test at http://localhost:3000
@@ -444,25 +387,13 @@ Develop and test at http://localhost:3000
 
 ```bash
 # Run linter
-pnpm lint
+bun lint
 
 # Run type checking
-pnpm typecheck
+bun typecheck
 
 # Test production build
-pnpm build
-```
-
-### Testing Against Staging
-
-```bash
-# Use staging environment
-pnpm staging
-
-# Test your changes...
-
-# Switch back to dev-cloud
-pnpm dev
+bun run build
 ```
 
 ---
@@ -480,19 +411,18 @@ pnpm dev
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Development servers (automatically load correct env file)
-pnpm dev        # Dev-cloud: All AWS resources (recommended)
-pnpm local      # Local: LocalStack + local backend
-pnpm staging    # Staging: Staging AWS environment
+bun prod       # Dev-cloud: All AWS resources (recommended)
+bun local      # Local: LocalStack + local backend
 
 # Build and quality checks
-pnpm build      # Build for production
-pnpm lint       # Run linter
-pnpm typecheck  # Type checking
+bun run build  # Build for production
+bun lint       # Run linter
+bun typecheck  # Type checking
 
-# LocalStack commands (for pnpm local)
+# LocalStack commands (for bun local)
 localstack start   # Start LocalStack
 localstack status  # Check LocalStack status
 localstack stop    # Stop LocalStack

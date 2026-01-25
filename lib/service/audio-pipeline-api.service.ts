@@ -1,4 +1,4 @@
-import { getCurrentUserId, getAuthHeaders } from './api-utils'
+import { getCurrentUserId, getAuthHeaders } from '../api-utils'
 
 // Replace with your actual API endpoint after deployment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_GATEWAY_URL

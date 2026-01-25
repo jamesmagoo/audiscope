@@ -1,31 +1,9 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
-import {
-  signUp,
-  signIn,
-  signOut,
-  getCurrentUser,
-  confirmSignUp,
-  resendSignUpCode,
-  resetPassword,
-  confirmResetPassword,
-  confirmSignIn,
-  type SignInOutput,
-} from "aws-amplify/auth"
-import { Amplify } from "aws-amplify"
+import { createContext, useContext } from "react"
+import { SessionProvider, useSession, signIn, signOut } from "next-auth/react"
 import * as Sentry from "@sentry/nextjs"
-
-const authConfig = {
-  Auth: {
-    Cognito: {
-      region: process.env.NEXT_PUBLIC_AWS_REGION || "us-east-1",
-      userPoolId: process.env.NEXT_PUBLIC_USER_POOL_ID || "",
-      userPoolClientId: process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID || "",
-    },
-  },
-}
 
 interface User {
   username: string
@@ -36,16 +14,11 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  isOperationLoading: boolean
   error: string | null
-  signInUser: (username: string, password: string) => Promise<SignInOutput>
-  signUpUser: (username: string, password: string, email: string) => Promise<void>
+  signInUser: () => Promise<void>
   signOutUser: () => Promise<void>
-  confirmSignUpUser: (username: string, code: string) => Promise<void>
-  resendConfirmationCode: (username: string) => Promise<void>
-  forgotPassword: (username: string) => Promise<void>
-  confirmForgotPassword: (username: string, code: string, newPassword: string) => Promise<void>
-  completeNewPassword: (newPassword: string) => Promise<void>
+  registerUser: () => void
+  resetPassword: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -58,179 +31,92 @@ export const useAuth = () => {
   return context
 }
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isOperationLoading, setIsOperationLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+const AuthProviderInner = ({ children }: { children: React.ReactNode }) => {
+  const { data: session, status } = useSession()
+  const loading = status === "loading"
 
-  useEffect(() => {
-    Amplify.configure(authConfig, { ssr: true })
-    checkAuthState()
-  }, [])
-
-  const checkAuthState = async () => {
-    try {
-      setLoading(true)
-      const currentUser = await getCurrentUser()
-      const userData = {
-        username: currentUser.username,
-        email: currentUser.signInDetails?.loginId || "",
+  // Transform NextAuth session into our User format
+  // IMPORTANT: If session has an error or no user, treat as unauthenticated
+  const user: User | null = session?.user && !session?.error
+    ? {
+        username: session.user.name || session.user.email?.split("@")[0] || "user",
+        email: session.user.email || "",
         attributes: {
-          userId: currentUser.userId,
-          email: currentUser.signInDetails?.loginId || "",
-          username: currentUser.username,
+          userId: session.user.id,
+          email: session.user.email || "",
+          username: session.user.name || session.user.email?.split("@")[0] || "user",
+          organisationId: session.user.organisationId,
+          roles: session.user.roles,
         },
       }
-      setUser(userData)
+    : null
 
-      // Set Sentry user context
-      Sentry.setUser({
-        id: currentUser.userId,
-        email: currentUser.signInDetails?.loginId || "",
-        username: currentUser.username,
-      })
-    } catch (error) {
-      setUser(null)
-      // Clear Sentry user context if no user is authenticated
-      Sentry.setUser(null)
-    } finally {
-      setLoading(false)
-    }
+  // Set Sentry user context
+  if (user) {
+    Sentry.setUser({
+      id: user.attributes.userId,
+      email: user.email,
+      username: user.username,
+    })
+  } else {
+    Sentry.setUser(null)
   }
 
-  const signInUser = async (username: string, password: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      const result = await signIn({ username, password })
-      if (result.isSignedIn) {
-        await checkAuthState()
-      }
-      return result
-    } catch (error: any) {
-      setError(error.message || "Failed to sign in")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
-  }
-
-  const signUpUser = async (username: string, password: string, email: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      await signUp({
-        username,
-        password,
-        options: { userAttributes: { email } },
-      })
-    } catch (error: any) {
-      setError(error.message || "Failed to sign up")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
+  const signInUser = async () => {
+    // Trigger NextAuth Keycloak OAuth2 flow
+    // This will redirect to Keycloak login, then back to the app
+    await signIn("keycloak", {
+      callbackUrl: "/dashboard",
+      redirect: true,
+    })
   }
 
   const signOutUser = async () => {
     try {
-      setIsOperationLoading(true)
-      setError(null)
-      await signOut()
-      setUser(null)
-      // Clear Sentry user context on sign out
+      await signOut({ redirect: false })
       Sentry.setUser(null)
     } catch (error: any) {
-      setError(error.message || "Failed to sign out")
       throw error
-    } finally {
-      setIsOperationLoading(false)
     }
   }
 
-  const confirmSignUpUser = async (username: string, code: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      await confirmSignUp({ username, confirmationCode: code })
-    } catch (error: any) {
-      setError(error.message || "Failed to confirm sign up")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
+  const registerUser = () => {
+    // Redirect to Keycloak registration page
+    const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:8080"
+    const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "audiscope"
+    const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "audiscope-web"
+    const redirectUri = encodeURIComponent(`${window.location.origin}/login`)
+
+    window.location.href = `${keycloakUrl}/realms/${realm}/protocol/openid-connect/registrations?client_id=${clientId}&response_type=code&scope=openid&redirect_uri=${redirectUri}`
   }
 
-  const resendConfirmationCode = async (username: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      await resendSignUpCode({ username })
-    } catch (error: any) {
-      setError(error.message || "Failed to resend confirmation code")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
-  }
-
-  const forgotPassword = async (username: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      await resetPassword({ username })
-    } catch (error: any) {
-      setError(error.message || "Failed to initiate password reset")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
-  }
-
-  const confirmForgotPassword = async (username: string, code: string, newPassword: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      await confirmResetPassword({ username, confirmationCode: code, newPassword })
-    } catch (error: any) {
-      setError(error.message || "Failed to reset password")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
-  }
-
-  const completeNewPassword = async (newPassword: string) => {
-    try {
-      setIsOperationLoading(true)
-      setError(null)
-      const result = await confirmSignIn({ challengeResponse: newPassword })
-      if (result.isSignedIn) {
-        await checkAuthState()
-      }
-    } catch (error: any) {
-      setError(error.message || "Failed to set new password")
-      throw error
-    } finally {
-      setIsOperationLoading(false)
-    }
+  const resetPassword = () => {
+    // Redirect to Keycloak password reset page
+    const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:8080"
+    const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "audiscope"
+    window.location.href = `${keycloakUrl}/realms/${realm}/login-actions/reset-credentials`
   }
 
   const value = {
     user,
     loading,
-    isOperationLoading,
-    error,
+    error: session?.error || null,
     signInUser,
-    signUpUser,
     signOutUser,
-    confirmSignUpUser,
-    resendConfirmationCode,
-    forgotPassword,
-    confirmForgotPassword,
-    completeNewPassword,
+    registerUser,
+    resetPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <SessionProvider
+      refetchInterval={0} // Disable automatic refetching to prevent memory leaks
+      refetchOnWindowFocus={false} // Disable refetch on tab focus
+    >
+      <AuthProviderInner>{children}</AuthProviderInner>
+    </SessionProvider>
+  )
 }

@@ -5,9 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 Development commands:
-- `bun dev` - Start development server with cloud resources (.env.dev-cloud)
+- `bun prod` - Start development server with cloud resources (.env.dev-cloud)
 - `bun local` - Start development server with LocalStack (.env.development)
-- `bun staging` - Start development server with staging environment (.env.staging)
 - `bun run build` - Build for production
 - `bun start` - Start production server
 - `bun lint` - Run ESLint
@@ -87,12 +86,12 @@ AudiScope supports multiple environment configurations for different development
 
 ### Environment Profiles
 
-The project includes four environment configuration files:
+The project includes two environment configuration files:
 
 1. **`.env.dev-cloud`** - Development with all real AWS resources (recommended)
 2. **`.env.development`** - Local development with LocalStack (S3 emulation)
-3. **`.env.staging`** - Staging environment configuration
-4. **`.env.example`** - Template with all available environment variables
+
+Note: `.env.local` is gitignored and should NOT be used as it overrides environment-specific files.
 
 ### Quick Start
 
@@ -150,13 +149,17 @@ NEXT_PUBLIC_API_GATEWAY_URL=https://your-gateway.execute-api.region.amazonaws.co
 **Backend 2: Core API (Product Management)**
 ```bash
 # Local development
-NEXT_PUBLIC_API_URL=http://localhost:5002
-NEXT_PUBLIC_CORE_API_URL=http://localhost:5002/api
+CORE_API_URL=http://localhost:5002/api
 
-# Production/Staging
-NEXT_PUBLIC_API_URL=https://api.example.com
-NEXT_PUBLIC_CORE_API_URL=https://api.example.com/api
+# Cloud development
+CORE_API_URL=http://core-api-dev-alb-766481977.eu-west-1.elb.amazonaws.com/api
 ```
+
+**Architecture:**
+- All Core API calls use Next.js proxy routes: `/api/core/*`
+- `CORE_API_URL` is server-side only (used in `next.config.mjs` for rewrites)
+- Backend URL is never exposed to browser (more secure, no CORS issues)
+- See `lib/service/*.service.ts` for client-side API calls
 
 #### AWS Bedrock Knowledge Base
 ```bash
@@ -194,7 +197,7 @@ localstack start
 # Verify it's running
 aws --endpoint-url=http://localhost:4566 s3 ls
 
-# In .env.local, set:
+# In .env.development, set:
 NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE=http://localhost:4566
 ```
 
@@ -245,12 +248,7 @@ bun dev
 bun local
 ```
 
-**Staging Environment:**
-```bash
-bun staging
-```
-
-No need to manually copy `.env` files - each command uses its corresponding environment file automatically.
+Each command automatically loads its corresponding environment file via `dotenv-cli`.
 
 **Verify Current Environment:**
 Check your browser console on app load. The application logs will show:
@@ -261,7 +259,7 @@ Check your browser console on app load. The application logs will show:
 ### Troubleshooting
 
 **"API endpoint not configured" error:**
-- Check that `NEXT_PUBLIC_API_GATEWAY_URL` is set in `.env.local`
+- Check that `NEXT_PUBLIC_API_GATEWAY_URL` is set in your environment file
 - Restart the development server after changing environment variables
 
 **File upload fails:**
@@ -271,8 +269,8 @@ Check your browser console on app load. The application logs will show:
 - Check browser console for detailed error messages
 
 **Authentication errors (401/403):**
-- Verify Cognito credentials in `.env.local`
-- Check that user pool and client ID are correct
+- Verify Keycloak credentials in your environment file
+- Check that realm, client ID, and NEXTAUTH_URL are correct
 - Clear browser localStorage and try logging in again
 
 **Backend connection errors:**
@@ -284,11 +282,10 @@ Check your browser console on app load. The application logs will show:
 
 - [ ] Install dependencies: `bun install`
 - [ ] Choose your environment and run the corresponding command:
-  - `bun dev` - All cloud resources (recommended)
+  - `bun prod` - All cloud resources (recommended)
   - `bun local` - LocalStack with local backend
-  - `bun staging` - Staging environment
 - [ ] If using LocalStack (`bun local`): Install and start LocalStack first
-- [ ] If using dev-cloud (`bun dev`): Verify backend ALB is accessible
+- [ ] If using dev-cloud (`bun prod`): Verify backend ALB is accessible
 - [ ] Test authentication (login/signup)
 - [ ] Verify file upload functionality
 - [ ] Check browser console for any errors

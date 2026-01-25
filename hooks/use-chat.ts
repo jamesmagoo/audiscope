@@ -6,7 +6,7 @@ import productChatClient, {
   type GetSessionResult,
   type SendMessageResult,
   type StartSessionResult
-} from '@/lib/chat.service'
+} from '@/lib/service/chat.service'
 
 /**
  * Query: List all chat sessions for a product
@@ -60,8 +60,6 @@ export function useStartSession() {
         messages: [],
         message_count: 0
       })
-
-      console.log('useStartSession: Session created:', data.session_id)
     },
   })
 }
@@ -113,8 +111,6 @@ export function useSendMessage() {
           queryKey: ['product-sessions', productId]
         })
       }
-
-      console.log('useSendMessage: Message sent, tokens used:', data.tokens_used)
     },
   })
 }
@@ -137,8 +133,6 @@ export function useDeleteSession() {
       queryClient.invalidateQueries({
         queryKey: ['product-sessions']
       })
-
-      console.log('useDeleteSession: Session deleted:', sessionId)
     },
   })
 }

@@ -2,6 +2,7 @@
 
 import {useState, useEffect, useCallback, useRef} from "react";
 import {QueryClient, QueryClientProvider, QueryCache, MutationCache} from "@tanstack/react-query";
+import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 import {useAuth} from "@/components/providers/auth-provider";
 import {useRouter} from "next/navigation";
 import {useToast} from "@/hooks/use-toast";
@@ -26,12 +27,10 @@ export default function QueryProvider({children}: Props) {
     const handleAuthError = useCallback(async (error: AuthenticationError) => {
         // Prevent duplicate error handling
         if (isHandlingAuthError.current) {
-            console.log('Already handling auth error, skipping duplicate');
             return;
         }
 
         isHandlingAuthError.current = true;
-        console.error('Authentication error detected:', error.message);
 
         // Show toast notification
         toast({
@@ -48,7 +47,6 @@ export default function QueryProvider({children}: Props) {
             // Redirect to login page
             router.push('/login');
         } catch (signOutError) {
-            console.error('Error during sign out:', signOutError);
             // Still redirect even if sign out fails
             router.push('/login');
         } finally {
@@ -84,6 +82,9 @@ export default function QueryProvider({children}: Props) {
             mutationCache,
             defaultOptions: {
                 queries: {
+                    // Cache management to prevent memory leaks
+                    staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+                    gcTime: 10 * 60 * 1000, // 10 minutes - garbage collection time (formerly cacheTime)
                     // Prevent automatic retries on authentication errors
                     retry: (failureCount, error) => {
                         if (AuthenticationError.isAuthError(error)) {
@@ -91,6 +92,10 @@ export default function QueryProvider({children}: Props) {
                         }
                         return failureCount < 3;
                     },
+                },
+                mutations: {
+                    // Garbage collection for mutations
+                    gcTime: 5 * 60 * 1000, // 5 minutes
                 },
             },
         });
@@ -116,6 +121,14 @@ export default function QueryProvider({children}: Props) {
     }, [queryClient, handleAuthError]);
 
     return (
-        <QueryClientProvider client={queryClient}> {children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+            {children}
+            {/* React Query DevTools - only loads in development */}
+            <ReactQueryDevtools
+                initialIsOpen={false}
+                buttonPosition="bottom-right"
+                position="bottom"
+            />
+        </QueryClientProvider>
     )
 }

@@ -7,7 +7,7 @@
  * Separate from Content Generation API (content-generation.service.ts)
  */
 
-import { makeAuthenticatedRequest, handleApiResponse } from './api-utils'
+import { makeAuthenticatedRequest, handleApiResponse } from '../api-utils'
 import type {
   LearningQuiz,
   QuizDetail,
@@ -21,12 +21,12 @@ import type {
   CompleteQuizResponse,
   QuizAttemptDTO,
   QuizAttemptStatus,
-} from './types/learning'
+} from '../types/learning'
 import {
   transformStartAttemptResponse,
   transformCompleteQuizResponse,
   transformQuizAttemptDTO,
-} from './types/learning'
+} from '../types/learning'
 
 // Use Next.js proxy path - all requests go through /api/core which rewrites to backend
 const API_PATH = '/api/core/v1/learning'

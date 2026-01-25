@@ -3,11 +3,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useAuth } from "@/components/providers/auth-provider"
 import { Brain } from "lucide-react"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export function LandingHeader() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -33,18 +33,22 @@ export function LandingHeader() {
 
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          {user ? (
-            <Button asChild>
-              <Link href="/dashboard/products">Go to Dashboard</Link>
-            </Button>
-          ) : (
+          {!loading && (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
-                <Link href="/login">Log in</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/signup">Get Started</Link>
-              </Button>
+              {user ? (
+                <Button asChild>
+                  <Link href="/dashboard">Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild className="hidden sm:inline-flex">
+                    <Link href="/login">Log in</Link>
+                  </Button>
+                  <Button asChild>
+                    <Link href="/signup">Get Started</Link>
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>

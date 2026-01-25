@@ -19,7 +19,7 @@ import {
   type StagedFileInfo,
   type AddFilesToProductResponse,
   type FileType,
-} from '@/lib/product-files.service'
+} from '@/lib/service/product-files.service'
 
 // ============================================================================
 // Individual Step Hooks

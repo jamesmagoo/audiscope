@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { ChatMessage, type Chat } from "@/lib/knowlege-base.service"
+import { ChatMessage, type Chat } from "@/lib/service/knowlege-base.service"
 import { useChats, useDeleteChat } from "@/hooks/use-knowledge-base"
 import { formatDistanceToNow } from "date-fns"
 
