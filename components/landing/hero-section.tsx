@@ -1,8 +1,13 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Zap, ArrowRight, Sparkles } from "lucide-react"
+import { useAuth } from "@/components/providers/auth-provider"
 
 export function HeroSection() {
+  const { user, loading } = useAuth()
+
   return (
     <section className="relative pt-32 pb-32 overflow-hidden">
       {/* Background Pattern */}
@@ -30,31 +35,49 @@ export function HeroSection() {
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button
-            size="lg"
-            className="h-12 px-8 text-lg rounded-full shadow-lg"
-            asChild
-            data-track="hero-cta-demo"
-          >
-            <a href="mailto:sales@landy.ai?subject=Book%20a%20Demo&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%20demo%20of%20Landy%20AI.">
-              Book a Demo
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </a>
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-12 px-8 text-lg rounded-full"
-            asChild
-            data-track="hero-cta-try"
-          >
-            <Link href="/dashboard">
-              <Sparkles className="mr-2 h-5 w-5" />
-              Try AI Assistant
-            </Link>
-          </Button>
-        </div>
+        {!loading && (
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {user ? (
+              <Button
+                size="lg"
+                className="h-12 px-8 text-lg rounded-full shadow-lg"
+                asChild
+                data-track="hero-cta-dashboard"
+              >
+                <Link href="/dashboard">
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-lg rounded-full shadow-lg"
+                  asChild
+                  data-track="hero-cta-demo"
+                >
+                  <a href="mailto:sales@landy.ai?subject=Book%20a%20Demo&body=Hi%2C%20I%27d%20like%20to%20schedule%20a%20demo%20of%20Landy%20AI.">
+                    Book a Demo
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-8 text-lg rounded-full"
+                  asChild
+                  data-track="hero-cta-try"
+                >
+                  <Link href="/dashboard">
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Try AI Assistant
+                  </Link>
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </section>
   )
