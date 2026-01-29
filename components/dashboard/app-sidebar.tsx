@@ -15,7 +15,8 @@ import {
   FileEdit,
   Settings,
   Bell,
-  HelpCircle
+  HelpCircle,
+  Mic
 } from "lucide-react"
 import {
   Sidebar,
@@ -41,6 +42,7 @@ export function AppSidebar() {
     { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
     { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: false },
     { name: "Content Management", href: "/dashboard/content", icon: FileEdit, disabled: false },
+    { name: "Simulator", href: "/dashboard/simulation", icon: Mic, disabled: false },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true, showDisabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true, showDisabled: true },
     { name: "Notifications", href: "/dashboard/notifications", icon: Bell, disabled: true, showDisabled: true },

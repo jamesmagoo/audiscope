@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { AuthProvider } from "@/components/providers/auth-provider"
+import { WebSocketProvider } from "@/components/providers/websocket-provider"
 import { Toaster } from "@/components/ui/toaster"
 import QueryProvider from "@/components/providers/query-provider";
 import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
@@ -91,10 +92,12 @@ export default function RootLayout({
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
         <AuthProvider>
           <QueryProvider>
-            {children}
-            <SpeedInsights />
-            <Toaster />
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+            <WebSocketProvider debug={process.env.NODE_ENV === 'development'}>
+              {children}
+              <SpeedInsights />
+              <Toaster />
+              <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+            </WebSocketProvider>
           </QueryProvider>
         </AuthProvider>
       </ThemeProvider>

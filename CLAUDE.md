@@ -59,7 +59,11 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
     - `auth-provider.tsx` - AWS Amplify authentication context provider
     - `query-provider.tsx` - TanStack React Query client provider
     - `theme-provider.tsx` - Theme context provider
+    - `websocket-provider.tsx` - Centralized WebSocket connection management
   - `auth-guard.tsx` - Route protection component for authenticated pages
+  - `simulation/` - Voice recording and AI conversation components
+    - `voice-recorder.tsx` - MediaRecorder-based audio capture with 3D flip card UI
+    - `audio-waveform.tsx` - Real-time frequency visualization
 - `lib/aws-api.service.ts` - AWS backend API client with TypeScript interfaces
 - `lib/auth-config.ts` - AWS Amplify authentication configuration
 - `hooks/` - Custom React hooks
@@ -70,8 +74,11 @@ AudiScope is a Next.js 15 medical training application for evaluating clinical t
 - `lib/api-utils.ts` - JWT authentication utilities and request helpers
 - `components/providers/auth-provider.tsx` - AWS Amplify authentication with JWT token management
 - `components/providers/query-provider.tsx` - TanStack React Query client configuration
+- `components/providers/websocket-provider.tsx` - WebSocket connection management with JWT auth
 - `app/dashboard/layout.tsx` - Dashboard layout with sidebar navigation
 - `components/ui/` - shadcn/ui components (managed via `components.json`)
+- `lib/websocket-utils.ts` - WebSocket manager factory with auto-reconnection
+- `hooks/use-simulation-websocket.ts` - Simulation WebSocket hook wrapper
 
 ### Development Notes
 
@@ -645,3 +652,285 @@ const { data, error, isLoading } = useQuery({
 - **Optimistic Updates**: Immediate UI feedback for mutations
 - **Infinite Queries**: Efficient pagination for large datasets
 - **Prefetching**: Anticipate user navigation and data needs
+
+## WebSocket Architecture with WebSocketProvider
+
+AudiScope uses a centralized WebSocketProvider for managing real-time WebSocket connections across the application. This provides unified connection management, automatic reconnection, and JWT authentication.
+
+### WebSocketProvider Architecture
+
+**Provider Setup:**
+- `components/providers/websocket-provider.tsx` - WebSocketProvider component (456 lines)
+- `lib/websocket-utils.ts` - WebSocket manager factory with reconnection logic (346 lines)
+- `app/layout.tsx` - Root layout wrapped with WebSocketProvider
+
+**Provider Hierarchy:**
+\`\`\`
+ThemeProvider → AuthProvider → QueryProvider → WebSocketProvider → {children}
+\`\`\`
+
+### Supported Connection Types
+
+| Type | Purpose | Auto-Reconnect | Environment Variable |
+|------|---------|----------------|---------------------|
+| **simulation** | AI voice conversation | ✅ Yes (10 attempts) | `NEXT_PUBLIC_SIMULATION_WS_URL` |
+| **notifications** | Real-time notifications | ✅ Yes (5 attempts) | `NEXT_PUBLIC_NOTIFICATIONS_WS_URL` |
+| **assessments** | Assessment progress | ✅ Yes (10 attempts) | Manual config |
+| **generic** | Custom use cases | ✅ Yes (10 attempts) | Manual config |
+
+### Key Features
+
+- **Connection Pooling**: Single connection per type, shared across components
+- **First Message Authentication**: JWT token sent as first WebSocket message (not in URL)
+- **Auth State Management**: New `authenticating` state with 5-second timeout
+- **Session Tracking**: Stores session_id, user_id after successful authentication
+- **Exponential Backoff**: 1s → 2s → 4s → 8s → 16s → 30s (capped)
+- **Event-Driven**: Subscribe to specific message types
+- **Message Queuing**: Buffers up to 100 messages when disconnected or authenticating
+- **Binary Support**: Handles both JSON and binary (ArrayBuffer) messages
+- **Centralized Errors**: Global error handling with per-connection state
+
+### Usage in Components
+
+**Simple Hook Pattern:**
+\`\`\`typescript
+import { useWebSocket } from '@/components/providers/websocket-provider'
+
+function MyComponent() {
+  const {
+    connect,
+    disconnect,
+    send,
+    sendJSON,
+    subscribe,
+    connectionState,
+    isConnected,
+    messages,
+    error
+  } = useWebSocket('simulation') // Connection type
+
+  useEffect(() => {
+    connect()
+    return () => disconnect()
+  }, [])
+
+  // Subscribe to events
+  useEffect(() => {
+    return subscribe('ai_response', (data) => {
+      console.log('AI Response:', data)
+    })
+  }, [subscribe])
+
+  return (
+    <div>
+      <p>Status: {connectionState}</p>
+      {isConnected && <button onClick={() => sendJSON({ type: 'message', content: 'Hello' })}>Send</button>}
+    </div>
+  )
+}
+\`\`\`
+
+**Auto-Connect Pattern:**
+\`\`\`typescript
+const { isConnected, send } = useWebSocket('notifications', true) // Auto-connect on mount
+\`\`\`
+
+### Simulation Feature Integration
+
+The simulation feature uses `hooks/use-simulation-websocket.ts` which wraps the provider with simulation-specific logic:
+
+\`\`\`typescript
+export function useSimulationWebSocket(options) {
+  // Uses WebSocketProvider internally
+  const { subscribe, send, connectionState, isConnected } = useWebSocket('simulation', options.autoConnect)
+
+  // Adds simulation-specific features:
+  // - AI message formatting
+  // - Audio chunk sending
+  // - Session management
+  // - Status message handling
+
+  return { sendAudioChunk, messages, connectionState, isConnected, error }
+}
+\`\`\`
+
+**Benefits of Provider Pattern:**
+- Component code reduced from ~180 lines to ~20 lines
+- Connection shared across multiple components
+- No duplicate connections
+- Centralized reconnection logic
+- Unified error handling
+
+### Message Protocol
+
+**Authentication Flow (First Message):**
+
+\`\`\`typescript
+// 1. Client → Server (First message after connection opens)
+{
+  type: 'auth',
+  token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...'
+}
+
+// 2. Server → Client (Auth success)
+{
+  type: 'auth_success',
+  session_id: 'sess_abc123',
+  user_id: 'user_xyz789',
+  timestamp: '2026-01-28T10:00:00Z'
+}
+
+// OR Server → Client (Auth failure)
+{
+  type: 'auth_error',
+  error: 'Invalid token'
+}
+\`\`\`
+
+**After Authentication - Normal Messages:**
+
+\`\`\`typescript
+// JSON messages (must include 'type' property)
+sendJSON({ type: 'message_type', data: 'payload' })
+
+// Binary messages (audio, files)
+const arrayBuffer = await blob.arrayBuffer()
+send(arrayBuffer)
+\`\`\`
+
+**Server → Client:**
+
+Messages are routed to subscribers based on `type` property:
+\`\`\`typescript
+// Server sends: { type: 'ai_response', content: '...' }
+
+// Client receives:
+subscribe('ai_response', (data) => {
+  console.log(data.content)
+})
+
+// Get session info
+const { getSessionInfo } = useWebSocket('simulation')
+const sessionInfo = getSessionInfo()
+// { sessionId: 'sess_abc123', userId: 'user_xyz789', timestamp: '...' }
+\`\`\`
+
+### Connection Lifecycle
+
+1. Component mounts → calls `connect()`
+2. Provider checks for existing connection
+3. If new: Create WebSocketManager, fetch JWT token
+4. Establish WebSocket connection (no token in URL)
+5. WebSocket opens → State: `connecting` → `authenticating`
+6. Send first message: `{ type: 'auth', token: '...' }`
+7. Set 5-second auth timeout
+8. Receive auth response: `{ type: 'auth_success', session_id: '...', user_id: '...', timestamp: '...' }`
+9. Store session info → State: `connected`
+10. Process queued messages
+11. Setup event handlers (stateChange, message, error)
+12. Component unmounts → calls `disconnect()`
+13. Provider closes connection and removes from registry
+
+### Reconnection Strategy
+
+**Exponential Backoff:**
+- Attempt 1: 1 second
+- Attempt 2: 2 seconds
+- Attempt 3: 4 seconds
+- Attempt 4: 8 seconds
+- Attempt 5: 16 seconds
+- Attempt 6+: 30 seconds (capped)
+
+**Configuration:**
+\`\`\`typescript
+await connect('simulation', {
+  reconnect: true,
+  maxReconnectAttempts: 10,
+  maxReconnectDelay: 30000
+})
+\`\`\`
+
+### Error Handling
+
+**Component-Level:**
+\`\`\`typescript
+const { error, connectionState } = useWebSocket('simulation')
+
+if (error) {
+  return <Alert variant="destructive">{error}</Alert>
+}
+
+if (connectionState === 'error') {
+  return <Button onClick={() => connect()}>Retry Connection</Button>
+}
+\`\`\`
+
+**Event Subscription:**
+\`\`\`typescript
+// General errors
+subscribe('error', (error) => {
+  console.error('WebSocket error:', error)
+})
+
+// Auth-specific errors
+subscribe('authenticationError', (error) => {
+  console.error('Auth failed:', error)
+  toast.error('Authentication failed. Please log in again.')
+})
+
+subscribe('authenticationTimeout', () => {
+  console.error('Auth timeout')
+  toast.error('Connection timeout. Please try again.')
+})
+
+// Reconnection errors
+subscribe('maxReconnectAttemptsReached', () => {
+  toast.error('Connection lost. Please refresh the page.')
+})
+\`\`\`
+
+### Development Tools
+
+- **Debug Mode**: Enable logging with `<WebSocketProvider debug={true}>`
+- **Console Logs**: Connection events, message sending, reconnection attempts
+- **State Inspection**: Access all connections via `useWebSocketContext().connections`
+
+### Documentation
+
+For comprehensive WebSocketProvider documentation:
+- **Architecture Guide**: `docs/websocket-provider.md` (800+ lines)
+- **Simulation Setup**: `docs/simulation-setup.md` (Phase 3 WebSocketProvider Refactor section)
+
+Topics covered:
+- API reference
+- Usage patterns
+- Configuration
+- Message protocol
+- Reconnection strategy
+- Error handling
+- Authentication
+- Best practices
+- Troubleshooting
+- Migration guide
+
+### Adding New Real-Time Features
+
+To add new WebSocket features (e.g., notifications):
+
+1. Add environment variable:
+   \`\`\`bash
+   NEXT_PUBLIC_NOTIFICATIONS_WS_URL=wss://your-endpoint.com
+   \`\`\`
+
+2. Use in component:
+   \`\`\`typescript
+   const { subscribe } = useWebSocket('notifications', true) // Auto-connect
+
+   useEffect(() => {
+     return subscribe('notification', (data) => {
+       toast.info(data.title)
+     })
+   }, [subscribe])
+   \`\`\`
+
+3. No provider changes needed! The provider automatically manages new connection types.
