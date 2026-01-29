@@ -26,12 +26,23 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { usePostHog } from 'posthog-js/react'
+import { NAVIGATION_EVENTS } from '@/lib/analytics/posthog-events'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { setOpenMobile, isMobile } = useSidebar()
+  const posthog = usePostHog()
 
-  const handleNavClick = () => {
+  const handleNavClick = (itemName: string, itemHref: string) => {
+    // Track navigation click
+    posthog?.capture(NAVIGATION_EVENTS.SIDEBAR_NAVIGATION_CLICKED, {
+      destination: itemHref,
+      destinationName: itemName,
+      sourcePage: pathname,
+      isMobile,
+    })
+
     if (isMobile) {
       setOpenMobile(false)
     }
@@ -84,7 +95,7 @@ export function AppSidebar() {
                       <span>{item.name}</span>
                     </div>
                   ) : (
-                    <Link href={item.href} onClick={handleNavClick}>
+                    <Link href={item.href} onClick={() => handleNavClick(item.name, item.href)}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.name}</span>
                     </Link>

@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
+import { AUTH_EVENTS } from '@/lib/analytics/posthog-events'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
@@ -28,6 +30,7 @@ export default function SignupPage() {
   }>({})
   const { signUpUser, confirmSignUpUser, resendConfirmationCode, isOperationLoading } = useAuth()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const validateSignupForm = () => {
     const newErrors: { email?: string; password?: string; confirmPassword?: string } = {}
@@ -78,8 +81,20 @@ export default function SignupPage() {
 
     try {
       await signUpUser(email, password, email)
+
+      // Track successful signup
+      posthog?.capture(AUTH_EVENTS.USER_SIGNED_UP, {
+        email,
+        signupMethod: 'email',
+      })
+
       setStep('confirm')
     } catch (error: any) {
+      // Track signup failure
+      posthog?.capture(AUTH_EVENTS.SIGNUP_FAILED, {
+        email,
+        errorMessage: error.message || 'Failed to sign up',
+      })
       setErrors({ general: error.message || 'Failed to sign up' })
     }
   }
@@ -93,8 +108,19 @@ export default function SignupPage() {
 
     try {
       await confirmSignUpUser(email, confirmationCode)
+
+      // Track email confirmation
+      posthog?.capture(AUTH_EVENTS.USER_EMAIL_CONFIRMED, {
+        email,
+      })
+
       router.push('/login?message=Confirmation successful. Please sign in.')
     } catch (error: any) {
+      // Track confirmation failure
+      posthog?.capture(AUTH_EVENTS.EMAIL_CONFIRMATION_FAILED, {
+        email,
+        errorMessage: error.message || 'Failed to confirm account',
+      })
       setErrors({ general: error.message || 'Failed to confirm account' })
     }
   }

@@ -16,6 +16,8 @@ import {
 } from "aws-amplify/auth"
 import { Amplify } from "aws-amplify"
 import * as Sentry from "@sentry/nextjs"
+import posthog from 'posthog-js'
+import { AUTH_EVENTS } from '@/lib/analytics/posthog-events'
 
 const authConfig = {
   Auth: {
@@ -137,6 +139,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsOperationLoading(true)
       setError(null)
+
+      // Track logout before clearing user state
+      if (process.env.NODE_ENV === 'production') {
+        posthog.capture(AUTH_EVENTS.USER_LOGGED_OUT)
+      }
+
       await signOut()
       setUser(null)
       // Clear Sentry user context on sign out
