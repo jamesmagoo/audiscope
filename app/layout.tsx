@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
@@ -95,7 +96,9 @@ export default function RootLayout({
           <AuthProvider>
             <PostHogIdentifier />
             <QueryProvider>
-              <PageViewTracker />
+              <Suspense fallback={null}>
+                <PageViewTracker />
+              </Suspense>
               {children}
               <SpeedInsights />
               <Toaster />
