@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
@@ -8,6 +9,8 @@ import { Toaster } from "@/components/ui/toaster"
 import QueryProvider from "@/components/providers/query-provider";
 import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { PHProvider, PostHogIdentifier } from "@/components/providers/posthog-provider"
+import { PageViewTracker } from "@/components/analytics/page-view-tracker"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -89,14 +92,20 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="audiscope-theme">
-        <AuthProvider>
-          <QueryProvider>
-            {children}
-            <SpeedInsights />
-            <Toaster />
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
-          </QueryProvider>
-        </AuthProvider>
+        <PHProvider>
+          <AuthProvider>
+            <PostHogIdentifier />
+            <QueryProvider>
+              <Suspense fallback={null}>
+                <PageViewTracker />
+              </Suspense>
+              {children}
+              <SpeedInsights />
+              <Toaster />
+              <ReactQueryDevtools initialIsOpen={false} buttonPosition={'top-right'}/>
+            </QueryProvider>
+          </AuthProvider>
+        </PHProvider>
       </ThemeProvider>
       </body>
     </html>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,8 @@ import { QuestionDisplay } from './question-display'
 import { AnswerFeedback } from './answer-feedback'
 import { useQuizDetail, useSubmitAnswer, useCompleteQuizAttempt, useAttemptResults } from '@/hooks/use-learning'
 import type { AnswerFeedback as AnswerFeedbackType } from '@/lib/types/learning'
+import { usePostHog } from 'posthog-js/react'
+import { QUIZ_EVENTS } from '@/lib/analytics/posthog-events'
 
 interface QuizTakerProps {
   quizId: string
@@ -24,11 +26,43 @@ export function QuizTaker({ quizId, attemptId }: QuizTakerProps) {
   const { data: attemptDetails, isLoading: attemptLoading } = useAttemptResults(attemptId, quizId)
   const submitAnswerMutation = useSubmitAnswer()
   const completeQuizMutation = useCompleteQuizAttempt()
+  const posthog = usePostHog()
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<AnswerFeedbackType | null>(null)
   const [userAnswers, setUserAnswers] = useState<Record<number, number>>({})
+  const quizStartTracked = useRef(false)
+  const questionStartTime = useRef<number>(Date.now())
+
+  // Track quiz started (once when quiz loads)
+  useEffect(() => {
+    if (quiz && !quizStartTracked.current) {
+      posthog?.capture(QUIZ_EVENTS.QUIZ_STARTED, {
+        quizId: quiz.id,
+        attemptId,
+        quizTitle: quiz.title,
+        totalQuestions: quiz.questions.length,
+        productId: quiz.product_id,
+      })
+      quizStartTracked.current = true
+    }
+  }, [quiz, attemptId, posthog])
+
+  // Track question viewed when question changes
+  useEffect(() => {
+    if (currentQuestion) {
+      posthog?.capture(QUIZ_EVENTS.QUIZ_QUESTION_VIEWED, {
+        quizId,
+        attemptId,
+        questionId: currentQuestion.id,
+        questionPosition: currentQuestionIndex + 1,
+        totalQuestions: quiz?.questions.length || 0,
+      })
+      // Reset timer for new question
+      questionStartTime.current = Date.now()
+    }
+  }, [currentQuestionIndex, currentQuestion, quizId, attemptId, quiz, posthog])
 
   // Load existing answers when attempt details are fetched
   useEffect(() => {
@@ -104,6 +138,19 @@ export function QuizTaker({ quizId, attemptId }: QuizTakerProps) {
         onSuccess: (feedbackData) => {
           console.log('[Submit Answer] Success! Feedback:', feedbackData)
           setFeedback(feedbackData)
+
+          // Track quiz answer submission
+          const timeTaken = Math.round((Date.now() - questionStartTime.current) / 1000)
+          posthog?.capture(QUIZ_EVENTS.QUIZ_QUESTION_ANSWERED, {
+            quizId,
+            attemptId,
+            questionId: currentQuestion.id,
+            questionPosition: currentQuestionIndex + 1,
+            selectedOption: selectedAnswer,
+            isCorrect: feedbackData.is_correct,
+            timeTaken,
+          })
+
           // ✅ Store answer by ARRAY INDEX (not position) for consistency with progress dots
           setUserAnswers((prev) => {
             const updated = {
@@ -126,6 +173,16 @@ export function QuizTaker({ quizId, attemptId }: QuizTakerProps) {
       if (!attemptId) return
       completeQuizMutation.mutate(attemptId, {
         onSuccess: (result) => {
+          // Track quiz completion
+          posthog?.capture(QUIZ_EVENTS.QUIZ_COMPLETED, {
+            quizId,
+            attemptId: result.id,
+            quizTitle: quiz?.title,
+            score: result.score,
+            correctAnswers: result.correct_answers,
+            totalQuestions: quiz?.questions.length || 0,
+          })
+
           router.push(`/dashboard/learning/quiz/${quizId}/results?attemptId=${result.id}`)
         },
       })

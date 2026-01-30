@@ -10,6 +10,8 @@ import { MessageSquareText, Plus, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type ChatMessage, type Chat, type ChatResponse } from "@/lib/knowlege-base.service"
 import { useChat, useChatMessages, useSendMessage, useKnowledgeBaseConfig } from "@/hooks/use-knowledge-base"
+import { usePostHog } from 'posthog-js/react'
+import { CHAT_EVENTS } from '@/lib/analytics/posthog-events'
 
 interface ChatInterfaceProps {
   conversationId: string | null
@@ -31,12 +33,23 @@ export function ChatInterface({ conversationId, onConversationUpdate, onNewConve
   const [messages, setMessages] = useState<MessageType[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
+  const sessionStartTracked = useRef(false)
+  const messageStartTime = useRef<number>(Date.now())
+
   // React Query hooks
   const { data: currentChat, isLoading: chatLoading } = useChat(conversationId)
   const { data: chatMessages, isLoading: messagesLoading } = useChatMessages(conversationId)
   const sendMessageMutation = useSendMessage()
   const { knowledgeBaseId } = useKnowledgeBaseConfig()
+  const posthog = usePostHog()
+
+  // Track chat session started (once per mount without conversationId)
+  useEffect(() => {
+    if (!conversationId && !sessionStartTracked.current) {
+      posthog?.capture(CHAT_EVENTS.CHAT_SESSION_STARTED)
+      sessionStartTracked.current = true
+    }
+  }, [conversationId, posthog])
   
   // Load messages when chat messages are fetched
   useEffect(() => {
@@ -62,6 +75,15 @@ export function ChatInterface({ conversationId, onConversationUpdate, onNewConve
   const handleSendMessage = async (content: string, files?: File[]) => {
     if (!content.trim() && (!files || files.length === 0)) return
 
+    // Track message sent
+    messageStartTime.current = Date.now()
+    posthog?.capture(CHAT_EVENTS.MESSAGE_SENT, {
+      conversationId: conversationId || 'new',
+      messageLength: content.length,
+      hasFiles: !!files && files.length > 0,
+      fileCount: files?.length || 0,
+    })
+
     // Add user message to UI immediately (optimistic update)
     const userMessage: MessageType = {
       id: `error-${Date.now()}`,
@@ -79,11 +101,27 @@ export function ChatInterface({ conversationId, onConversationUpdate, onNewConve
         knowledgeBaseId
       })
 
+      // Track message received
+      const responseTime = Math.round((Date.now() - messageStartTime.current) / 1000)
+      posthog?.capture(CHAT_EVENTS.MESSAGE_RECEIVED, {
+        conversationId: response.chat?.id || conversationId,
+        responseTime,
+        messageCount: response.messages?.length || 0,
+      })
+
+      // Track conversation created if this is a new conversation
+      if (!conversationId && response.chat) {
+        posthog?.capture(CHAT_EVENTS.CONVERSATION_CREATED, {
+          conversationId: response.chat.id,
+          chatTitle: response.chat.title,
+        })
+      }
+
       // Replace temp messages with real API response
       if (response.messages && response.messages.length > 0) {
         setMessages(convertApiMessagesToUI(response.messages))
       }
-      
+
       // Notify parent of conversation update
       if (response.chat && onConversationUpdate) {
         onConversationUpdate(response.chat)

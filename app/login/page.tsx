@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { usePostHog } from 'posthog-js/react'
+import { AUTH_EVENTS } from '@/lib/analytics/posthog-events'
 
 // Component to handle search params (needs Suspense)
 function LoginForm() {
@@ -33,6 +35,7 @@ function LoginForm() {
   const { signInUser, completeNewPassword, signOutUser, isOperationLoading, user } = auth
   const router = useRouter()
   const searchParams = useSearchParams()
+  const posthog = usePostHog()
 
   useEffect(() => {
     const message = searchParams.get('message')
@@ -108,9 +111,19 @@ function LoginForm() {
         setStep('newPassword')
         setErrors({})
       } else if (result.isSignedIn) {
+        // Track successful login
+        posthog?.capture(AUTH_EVENTS.USER_LOGGED_IN, {
+          email,
+          loginMethod: 'email',
+        })
         router.push('/dashboard/products')
       }
     } catch (error: any) {
+      // Track login failure
+      posthog?.capture(AUTH_EVENTS.LOGIN_FAILED, {
+        email,
+        errorMessage: error.message || 'Failed to sign in',
+      })
       setErrors({ general: error.message || 'Failed to sign in' })
     }
   }
@@ -124,6 +137,12 @@ function LoginForm() {
 
     try {
       await completeNewPassword(newPassword)
+
+      // Track password reset completion
+      posthog?.capture(AUTH_EVENTS.USER_PASSWORD_RESET_COMPLETED, {
+        email,
+      })
+
       router.push('/dashboard/products')
     } catch (error: any) {
       setErrors({ general: error.message || 'Failed to set new password' })

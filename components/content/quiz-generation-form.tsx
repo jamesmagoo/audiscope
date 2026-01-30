@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Loader2, Sparkles, AlertCircle, UserPlus, Users, GraduationCap, Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePostHog } from 'posthog-js/react'
+import { CONTENT_EVENTS } from '@/lib/analytics/posthog-events'
 import {
   Card,
   CardContent,
@@ -63,6 +65,7 @@ interface QuizGenerationFormProps {
 export function QuizGenerationForm({ onSuccess }: QuizGenerationFormProps) {
   const { data: productsData, isLoading: productsLoading } = useProducts()
   const generateQuizMutation = useGenerateQuiz()
+  const posthog = usePostHog()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,6 +78,16 @@ export function QuizGenerationForm({ onSuccess }: QuizGenerationFormProps) {
   })
 
   const onSubmit = async (data: FormValues) => {
+    const startTime = Date.now()
+
+    // Track generation initiated
+    posthog?.capture(CONTENT_EVENTS.CONTENT_GENERATION_INITIATED, {
+      productId: data.product_id,
+      audienceType: data.audience_type,
+      difficulty: data.difficulty,
+      questionCount: data.question_count,
+    })
+
     try {
       const result = await generateQuizMutation.mutateAsync({
         product_id: data.product_id,
@@ -83,10 +96,29 @@ export function QuizGenerationForm({ onSuccess }: QuizGenerationFormProps) {
         question_count: data.question_count,
       })
 
+      // Track generation completed
+      const timeTaken = Math.round((Date.now() - startTime) / 1000)
+      posthog?.capture(CONTENT_EVENTS.CONTENT_GENERATION_COMPLETED, {
+        generationId: result.generation_id,
+        productId: data.product_id,
+        audienceType: data.audience_type,
+        difficulty: data.difficulty,
+        questionCount: data.question_count,
+        timeTaken,
+        status: result.status,
+      })
+
       if (onSuccess && result.generation_id) {
         onSuccess(result.generation_id)
       }
     } catch (error) {
+      // Track generation failure
+      posthog?.capture(CONTENT_EVENTS.CONTENT_GENERATION_FAILED, {
+        productId: data.product_id,
+        audienceType: data.audience_type,
+        errorMessage: (error as any)?.message || 'Failed to generate quiz',
+      })
+
       // Error toast handled by mutation
       console.error('Failed to generate quiz:', error)
     }
