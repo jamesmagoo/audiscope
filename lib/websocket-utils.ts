@@ -446,19 +446,3 @@ export function createWebSocketManager(config: WebSocketConfig): WebSocketManage
     getSessionInfo
   }
 }
-
-/**
- * Helper to create an authenticated WebSocket URL with JWT token
- * @deprecated This is no longer used as auth is now sent as first message
- * Kept for backward compatibility if needed
- */
-export async function createAuthenticatedWebSocketURL(baseUrl: string): Promise<string> {
-  const authHeaders = await getAuthHeaders()
-  const token = authHeaders.Authorization?.replace('Bearer ', '')
-
-  if (!token) {
-    throw new Error('No authentication token available')
-  }
-
-  return `${baseUrl}?token=${encodeURIComponent(token)}`
-}

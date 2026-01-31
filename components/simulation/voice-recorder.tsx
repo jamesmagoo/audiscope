@@ -1,77 +1,112 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff, Send, CheckCircle2 } from 'lucide-react'
+import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AudioWaveform } from './audio-waveform'
-import { useSimulationWebSocket } from '@/hooks/use-simulation-websocket'
-import { useWebSocket } from '@/components/providers/websocket-provider'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useSimpleWebSocket } from '@/hooks/use-simple-websocket'
+import { createSimulationSession } from '@/lib/simulation-api.service'
+import { useProducts } from '@/hooks/use-products'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 type RecordingState = 'idle' | 'recording' | 'processing'
+type SessionState = 'idle' | 'creating' | 'ready' | 'error'
 
 export function VoiceRecorder() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
+  const [sessionState, setSessionState] = useState<SessionState>('idle')
   const [recordingTime, setRecordingTime] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isAnalyserReady, setIsAnalyserReady] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [selectedProductId, setSelectedProductId] = useState<string>('none')
+
+  // Fetch products for selection
+  const { data: products, isLoading: isLoadingProducts } = useProducts('active')
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+  const audioSequenceRef = useRef(0)
+  const hasInitializedSessionRef = useRef(false)
 
-  // WebSocket connection for streaming
+  // WebSocket connection - ONLY connect if we have a session ID
+  const baseUrl = process.env.NEXT_PUBLIC_SIMULATION_WS_URL || 'ws://localhost:5002/api/v1/simulations'
+  const wsUrl = sessionId ? `${baseUrl}/${sessionId}/stream` : null
+
   const {
-    connect: connectWS,
-    disconnect: disconnectWS,
-    sendAudioChunk,
-    connectionState,
+    send: sendWS,
     isConnected: isWSConnected,
-    messages: aiMessages,
-    error: wsError
-  } = useSimulationWebSocket({
-    debug: true
+    connectionState,
+    error: wsError,
+    subscribe
+  } = useSimpleWebSocket({
+    url: wsUrl || '', // Empty string prevents connection until session created
+    debug: true,
+    reconnect: true,
+    maxReconnectAttempts: 10
   })
 
-  // Test WebSocket connection (for learning/debugging)
-  const {
-    connect: connectTest,
-    disconnect: disconnectTest,
-    sendJSON: sendTestJSON,
-    subscribe: subscribeTest,
-    connectionState: testConnectionState,
-    isConnected: isTestConnected,
-    error: testError
-  } = useWebSocket('generic')
+  // Create session when product is selected
+  const handleCreateSession = async () => {
+    // Prevent duplicate session creation (React StrictMode guard)
+    if (hasInitializedSessionRef.current) {
+      console.log('[VoiceRecorder] Session already initialized - skipping')
+      return
+    }
 
-  const [testResponse, setTestResponse] = useState<string | null>(null)
-  const [lastPingSent, setLastPingSent] = useState<Date | null>(null)
-  const [testSessionId] = useState<string>(() => `test-${Date.now()}`)
+    hasInitializedSessionRef.current = true
 
-  // Cleanup on unmount only
+    try {
+      setSessionState('creating')
+      setError(null)
+
+      console.log('[VoiceRecorder] Creating simulation session...')
+
+      const sessionRequest: any = {
+        simulation_type: 'scenario_based',
+        scenario_prompt: selectedProductId === 'none'
+          ? 'General medical scenario training'
+          : `Product demonstration and training`,
+      }
+
+      // Only include product_id if a product is selected
+      if (selectedProductId !== 'none') {
+        sessionRequest.product_id = selectedProductId
+      }
+
+      const response = await createSimulationSession(sessionRequest)
+
+      console.log('[VoiceRecorder] Session created:', response.session_id)
+      setSessionId(response.session_id)
+      setSessionState('ready')
+    } catch (err) {
+      console.error('[VoiceRecorder] Failed to create session:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create simulation session')
+      setSessionState('error')
+      hasInitializedSessionRef.current = false // Allow retry on error
+    }
+  }
+
+  // Cleanup audio resources on unmount
   useEffect(() => {
     return () => {
-      console.log('Component unmounting - cleanup')
+      console.log('[VoiceRecorder] Unmounting - cleanup')
       if (timerIntervalRef.current) {
-        console.log('Cleanup: Clearing timer')
         clearInterval(timerIntervalRef.current)
       }
       if (stream) {
-        console.log('Cleanup: Stopping stream tracks')
         stream.getTracks().forEach(track => track.stop())
       }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        console.log('Cleanup: Closing audio context')
         audioContextRef.current.close()
       }
-      // Disconnect WebSocket
-      disconnectWS()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -83,72 +118,25 @@ export function VoiceRecorder() {
     }
   }, [wsError])
 
-  // Subscribe to pong messages from test connection
+  // Subscribe to audio_processed messages from server
   useEffect(() => {
-    const unsubscribe = subscribeTest('pong', (data) => {
-      console.log('[TEST] Received pong:', data)
-      const pongData = data as { type: string; session_id?: string; timestamp?: string }
-      const latency = lastPingSent ? Date.now() - lastPingSent.getTime() : 0
-      setTestResponse(`Pong received! Session: ${pongData.session_id || 'unknown'} (${latency}ms latency)`)
+    const unsubscribe = subscribe('audio_processed', (data: unknown) => {
+      const message = data as { payload: { turn_number: number; audio_url: string; status: string } }
+      console.log('[VoiceRecorder] Audio processed:', message.payload)
+
+      // Reset to idle state after server confirms processing
+      setRecordingState('idle')
+
+      // Reset sequence counter for next turn
+      audioSequenceRef.current = 0
+
+      // Could show turn number or status to user here
+      console.log(`Turn ${message.payload.turn_number} saved: ${message.payload.status}`)
     })
 
     return unsubscribe
-  }, [subscribeTest, lastPingSent])
+  }, [subscribe])
 
-  // Test WebSocket handlers
-  const handleTestConnect = async () => {
-    try {
-      setTestResponse(null)
-      console.log('[TEST] Connecting to test WebSocket...')
-      console.log('[TEST] Session ID:', testSessionId)
-
-      // Connect to Core API simulation endpoint with session ID
-      const baseUrl = process.env.NEXT_PUBLIC_TEST_WS_URL || 'ws://localhost:5002/api/v1/simulations'
-      const wsUrl = `${baseUrl}/${testSessionId}/stream`
-
-      await connectTest({
-        url: wsUrl,
-        debug: true
-      })
-
-      setTestResponse(`Connected to session: ${testSessionId}. Ready to send ping.`)
-    } catch (err) {
-      console.error('[TEST] Connection failed:', err)
-      setTestResponse(`Connection failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }
-
-  const handleTestDisconnect = () => {
-    console.log('[TEST] Disconnecting...')
-    disconnectTest()
-    setTestResponse(null)
-    setLastPingSent(null)
-  }
-
-  const handleSendPing = () => {
-    if (!isTestConnected) {
-      setTestResponse('Not connected! Click "Connect Test" first.')
-      return
-    }
-
-    console.log('[TEST] Sending ping...')
-    const now = new Date()
-    setLastPingSent(now)
-
-    // Send ping message with ISO 8601 timestamp format
-    const success = sendTestJSON({
-      type: 'ping',
-      timestamp: now.toISOString()
-    })
-
-    if (success) {
-      setTestResponse('Ping sent! Waiting for pong...')
-    } else {
-      setTestResponse('Failed to send ping. Check connection.')
-    }
-  }
-
-  // Debug timer
   useEffect(() => {
     console.log('Timer state changed:', recordingTime, 'Recording:', recordingState)
   }, [recordingTime, recordingState])
@@ -158,10 +146,10 @@ export function VoiceRecorder() {
       console.log('=== START RECORDING ===')
       setError(null)
 
-      // Connect WebSocket if not already connected
-      if (!isWSConnected && connectionState !== 'connecting') {
-        console.log('Connecting to WebSocket...')
-        await connectWS()
+      // Verify WebSocket is connected before proceeding
+      if (!isWSConnected) {
+        setError('WebSocket not connected. Please wait for connection.')
+        return
       }
 
       // Request microphone access
@@ -200,12 +188,29 @@ export function VoiceRecorder() {
         if (event.data.size > 0) {
           console.log('Data available:', event.data.size, 'bytes')
 
-          // Stream audio chunk to WebSocket (instead of storing in memory)
+          // Stream audio chunk to WebSocket in base64 format (core-API spec)
           if (isWSConnected) {
             try {
-              const success = await sendAudioChunk(event.data)
-              if (!success) {
-                console.warn('Failed to send audio chunk via WebSocket')
+              // Convert Blob to ArrayBuffer then to base64
+              const arrayBuffer = await event.data.arrayBuffer()
+              const uint8Array = new Uint8Array(arrayBuffer)
+              const base64Chunk = btoa(String.fromCharCode(...uint8Array))
+
+              // Send as single JSON message per core-API spec
+              const message = {
+                type: 'audio_chunk',
+                payload: {
+                  chunk: base64Chunk,
+                  sequence: audioSequenceRef.current++,
+                  format: 'webm'
+                }
+              }
+
+              const sent = sendWS(JSON.stringify(message))
+              if (!sent) {
+                console.warn('Failed to send audio chunk')
+              } else {
+                console.log('Sent audio chunk', message.payload.sequence, base64Chunk.length, 'bytes (base64)')
               }
             } catch (err) {
               console.error('Error sending audio chunk:', err)
@@ -224,8 +229,11 @@ export function VoiceRecorder() {
         console.log('MediaRecorder stopped - Duration was:', recordingTime)
         setRecordingState('processing')
 
-        // No need to create blob - chunks were streamed via WebSocket
-        console.log('Recording completed - audio streamed to WebSocket')
+        // Send audio_complete signal to server (core-API spec)
+        if (isWSConnected) {
+          console.log('Sending audio_complete signal')
+          sendWS(JSON.stringify({ type: 'audio_complete' }))
+        }
 
         // Cleanup audio context (may already be closed by stopRecording)
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
@@ -338,32 +346,27 @@ export function VoiceRecorder() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
-  const getStatusBadge = () => {
-    switch (recordingState) {
-      case 'recording':
-        return (
-          <Badge variant="destructive" className="animate-pulse">
-            <span className="mr-1.5 h-2 w-2 rounded-full bg-white" />
-            Recording
-          </Badge>
-        )
-      case 'processing':
-        return (
-          <Badge variant="secondary">
-            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-            Processing
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant="outline">
-            Ready
-          </Badge>
-        )
-    }
-  }
-
   const getConnectionBadge = () => {
+    // Show session creation state first
+    if (sessionState === 'creating') {
+      return (
+        <Badge variant="secondary" className="gap-1.5">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Creating Session...
+        </Badge>
+      )
+    }
+
+    if (sessionState === 'error') {
+      return (
+        <Badge variant="destructive" className="gap-1.5">
+          <AlertCircle className="h-3 w-3" />
+          Session Error
+        </Badge>
+      )
+    }
+
+    // Then show WebSocket connection state
     switch (connectionState) {
       case 'connected':
         return (
@@ -400,103 +403,62 @@ export function VoiceRecorder() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] gap-6">
-      {/* WebSocket Test Panel (for learning/debugging) */}
-      <Card className="w-full max-w-2xl border-dashed hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Send className="h-5 w-5" />
-            WebSocket Test - Ping/Pong
-          </CardTitle>
-          <CardDescription>
-            Test WebSocket connection flow: Connect → Send Ping → Receive Pong
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Connection Status */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Connection:</span>
-            <Badge
-              variant={
-                testConnectionState === 'connected'
-                  ? 'default'
-                  : testConnectionState === 'connecting'
-                  ? 'secondary'
-                  : testConnectionState === 'error'
-                  ? 'destructive'
-                  : 'outline'
-              }
+      {/* Product Selection - Show only if session not created yet */}
+      {sessionState === 'idle' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-2xl space-y-4"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="product-select">Select a Product (Optional)</Label>
+            <Select
+              value={selectedProductId}
+              onValueChange={setSelectedProductId}
+              disabled={isLoadingProducts}
             >
-              {testConnectionState === 'connected' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-              {testConnectionState === 'connecting' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-              {testConnectionState === 'connected' ? 'Connected' : testConnectionState}
-            </Badge>
+              <SelectTrigger id="product-select" className="w-full">
+                <SelectValue placeholder={isLoadingProducts ? "Loading products..." : "No product (general training)"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No product (general training)</SelectItem>
+                {products?.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name} - {product.manufacturer}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {selectedProductId === 'none'
+                ? "You'll practice general medical scenarios"
+                : "You'll practice discussing this specific product"}
+            </p>
           </div>
 
-          {/* Test Response */}
-          {testResponse && (
-            <Alert>
-              <AlertDescription className="font-mono text-xs">
-                {testResponse}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Test Error */}
-          {testError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{testError}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            {!isTestConnected ? (
-              <Button onClick={handleTestConnect} disabled={testConnectionState === 'connecting'} className="flex-1">
-                {testConnectionState === 'connecting' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Wifi className="h-4 w-4 mr-2" />
-                    Connect Test
-                  </>
-                )}
-              </Button>
-            ) : (
+          <Button
+            onClick={handleCreateSession}
+            disabled={isLoadingProducts}
+            className="w-full"
+          >
+            {isLoadingProducts ? (
               <>
-                <Button onClick={handleSendPing} variant="default" className="flex-1">
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Ping
-                </Button>
-                <Button onClick={handleTestDisconnect} variant="outline">
-                  <WifiOff className="h-4 w-4 mr-2" />
-                  Disconnect
-                </Button>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading Products...
               </>
+            ) : (
+              'Start Simulation Session'
             )}
-          </div>
+          </Button>
+        </motion.div>
+      )}
 
-          {/* Instructions */}
-          <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
-            <p className="font-semibold">Backend Setup:</p>
-            <code className="block bg-muted p-2 rounded text-[10px]">
-              Endpoint: ws://localhost:5002/api/v1/simulations/{'{session-id}'}/stream
-              <br />
-              Ping: {`{ type: "ping", timestamp: "2026-01-28T10:00:00Z" }`}
-              <br />
-              Pong: {`{ type: "pong", session_id: "...", timestamp: "..." }`}
-            </code>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Connection Status */}
-      <div className="flex items-center gap-2">
-        {getConnectionBadge()}
-      </div>
+      {/* Connection Status - Show after session creation starts */}
+      {sessionState !== 'idle' && (
+        <div className="flex items-center gap-2">
+          {getConnectionBadge()}
+        </div>
+      )}
 
       {/* Error Alert */}
       <AnimatePresence>
@@ -516,8 +478,9 @@ export function VoiceRecorder() {
         )}
       </AnimatePresence>
 
-      {/* 3D Flip Card Container */}
-      <div className="relative w-full max-w-2xl h-[450px]" style={{ perspective: '1500px' }}>
+      {/* 3D Flip Card Container - Show only after session creation */}
+      {sessionState !== 'idle' && (
+        <div className="relative w-full max-w-2xl h-[450px]" style={{ perspective: '1500px' }}>
 
         {/* The Actual Card that Flips */}
         <motion.div
@@ -557,39 +520,16 @@ export function VoiceRecorder() {
                     </p>
                   </div>
 
-                  {/* AI Messages (if any) */}
-                  {aiMessages.length > 0 && (
-                    <ScrollArea className="w-full max-h-[200px] rounded-lg border border-border/30 bg-background/50 p-4">
-                      <div className="space-y-3">
-                        {aiMessages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`text-sm ${
-                              message.type === 'ai'
-                                ? 'text-foreground'
-                                : message.type === 'status'
-                                ? 'text-muted-foreground italic'
-                                : 'text-muted-foreground'
-                            }`}
-                          >
-                            <span className="font-semibold">
-                              {message.type === 'ai' ? 'AI: ' : message.type === 'status' ? 'Status: ' : 'You: '}
-                            </span>
-                            {message.content}
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
+                  {/* AI Messages - Coming soon */}
 
                   {/* Start Button */}
                   <Button
                     size="lg"
                     onClick={startRecording}
-                    disabled={connectionState === 'connecting'}
+                    disabled={sessionState !== 'ready' || connectionState !== 'connected'}
                     className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
                   >
-                    {connectionState === 'connecting' ? (
+                    {sessionState === 'creating' || connectionState === 'connecting' ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
                     ) : (
                       <Mic className="h-6 w-6" />
@@ -642,7 +582,8 @@ export function VoiceRecorder() {
             </div>
           </div>
         </motion.div>
-      </div>
+        </div>
+      )}
 
       {/* Processing State - Overlay */}
       <AnimatePresence>

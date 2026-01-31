@@ -147,12 +147,20 @@ export function WebSocketProvider({ children, defaultConfigs = {}, debug = false
 
   // Update connection state helper
   const updateConnectionState = useCallback((type: WebSocketConnectionType, updates: Partial<ConnectionInfo>) => {
+    // Update ref immediately (synchronous)
+    const existing = connectionsRef.current.get(type)
+    if (existing) {
+      const updated = { ...existing, ...updates }
+      connectionsRef.current.set(type, updated)
+    }
+
+    // Also update state for reactivity
     setConnections(prev => {
       const newMap = new Map(prev)
-      const existing = newMap.get(type)
+      const existingInState = newMap.get(type)
 
-      if (existing) {
-        newMap.set(type, { ...existing, ...updates })
+      if (existingInState) {
+        newMap.set(type, { ...existingInState, ...updates })
       }
 
       return newMap
@@ -166,10 +174,10 @@ export function WebSocketProvider({ children, defaultConfigs = {}, debug = false
     type: WebSocketConnectionType,
     config?: Partial<WebSocketConnectionConfig>
   ): Promise<void> => {
-    // Check if already connected
+    // Check if already connected or in process of connecting
     const existing = connectionsRef.current.get(type)
-    if (existing && (existing.state === 'connected' || existing.state === 'connecting')) {
-      if (debug) console.log(`[WebSocketProvider] Already connected to ${type}`)
+    if (existing && (existing.state === 'connected' || existing.state === 'connecting' || existing.state === 'authenticating')) {
+      if (debug) console.log(`[WebSocketProvider] Already connected/connecting to ${type} (state: ${existing.state})`)
       return
     }
 
@@ -222,7 +230,7 @@ export function WebSocketProvider({ children, defaultConfigs = {}, debug = false
         updateConnectionState(type, { error: errorMessage })
       })
 
-      // Store connection info
+      // Store connection info in BOTH ref and state immediately to prevent race conditions
       const connectionInfo: ConnectionInfo = {
         manager,
         state: 'connecting',
@@ -231,6 +239,10 @@ export function WebSocketProvider({ children, defaultConfigs = {}, debug = false
         config: finalConfig
       }
 
+      // Update ref immediately (synchronous) to prevent duplicate connections
+      connectionsRef.current.set(type, connectionInfo)
+
+      // Also update state for reactivity
       setConnections(prev => new Map(prev).set(type, connectionInfo))
 
       // Initiate connection
@@ -259,6 +271,10 @@ export function WebSocketProvider({ children, defaultConfigs = {}, debug = false
       if (debug) console.log(`[WebSocketProvider] Disconnecting from ${type}`)
       connection.manager.disconnect()
 
+      // Remove from ref immediately (synchronous)
+      connectionsRef.current.delete(type)
+
+      // Also remove from state for reactivity
       setConnections(prev => {
         const newMap = new Map(prev)
         newMap.delete(type)

@@ -22,9 +22,6 @@ import { createWebSocketManager, type WebSocketManager } from './websocket-utils
 // WebSocket URL from environment (added to .env files)
 const SIMULATION_WS_URL = process.env.NEXT_PUBLIC_SIMULATION_WS_URL || ''
 
-// TODO: Add this to environment variables when backend is ready (HTTP fallback)
-const SIMULATION_API_URL = process.env.NEXT_PUBLIC_SIMULATION_API_URL || ''
-
 /**
  * Audio conversation request
  */
@@ -122,12 +119,111 @@ export async function submitSimulationAudio(
 }
 
 /**
+ * Valid simulation types
+ */
+export type SimulationType = 'feature_demo' | 'objection_handling' | 'scenario_based'
+
+/**
+ * Request to create a new simulation session
+ */
+export interface CreateSimulationRequest {
+  product_id?: string // Optional - omit if no product selected
+  simulation_type: SimulationType
+  scenario_prompt: string
+}
+
+/**
+ * Response from creating a simulation session
+ */
+export interface CreateSimulationResponse {
+  session_id: string
+  product_id?: string // Only present if product was selected
+  simulation_type: SimulationType
+  scenario_prompt: string
+  status: 'in_progress' | 'completed' | 'failed'
+  started_at: string
+}
+
+/**
+ * Create a new simulation session
+ *
+ * @param request - Simulation configuration
+ * @param request.product_id - (Optional) UUID of the product. Omit for general training scenarios.
+ * @param request.simulation_type - Type: "feature_demo" | "objection_handling" | "scenario_based"
+ * @param request.scenario_prompt - Description of the scenario (e.g., "Customer is concerned about price")
+ * @returns Session information with server-generated session_id (UUID v4)
+ *
+ * Flow:
+ * 1. POST /api/v1/simulations with simulation_type, scenario_prompt, and optionally product_id
+ * 2. Backend extracts user_id, organisation_id from JWT token
+ * 3. Backend generates UUID v4 session_id
+ * 4. Returns session info including session_id, status: "in_progress", started_at timestamp
+ * 5. Frontend uses session_id to open WebSocket: ws://host/api/v1/simulations/{session_id}/stream
+ *
+ * Examples:
+ * ```typescript
+ * // With product
+ * const session = await createSimulationSession({
+ *   product_id: "550e8400-e29b-41d4-a716-446655440000",
+ *   simulation_type: "objection_handling",
+ *   scenario_prompt: "Customer is concerned about price"
+ * })
+ *
+ * // Without product (general training)
+ * const session = await createSimulationSession({
+ *   simulation_type: "scenario_based",
+ *   scenario_prompt: "General medical scenario training"
+ * })
+ *
+ * console.log(session.session_id) // "abc123-456-789"
+ * ```
+ */
+export async function createSimulationSession(
+  request: CreateSimulationRequest
+): Promise<CreateSimulationResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_CORE_API_URL || process.env.NEXT_PUBLIC_API_URL
+
+  if (!baseUrl) {
+    throw new Error(
+      'API URL not configured. ' +
+      'Please add NEXT_PUBLIC_CORE_API_URL or NEXT_PUBLIC_API_URL to your .env file.'
+    )
+  }
+
+  console.log('[SIMULATION API] Creating simulation session', {
+    product_id: request.product_id,
+    simulation_type: request.simulation_type,
+    scenario_prompt: request.scenario_prompt,
+  })
+
+  const response = await makeAuthenticatedRequest(
+    `${baseUrl}/api/v1/simulations`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    }
+  )
+
+  const data = await handleApiResponse(response)
+
+  console.log('[SIMULATION API] Session created', {
+    session_id: data.session_id,
+    status: data.status,
+  })
+
+  return data
+}
+
+/**
  * Start a new simulation session
  *
  * @param scenario - Optional scenario configuration
  * @returns Session information
  *
- * NOTE: Backend endpoint not yet implemented
+ * @deprecated Use createSimulationSession() instead for full control
  */
 export async function startSimulationSession(
   scenario?: string
