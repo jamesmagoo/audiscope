@@ -118,7 +118,18 @@ send(JSON.stringify({ type: 'audio_chunk', payload: { ... } }))
 }
 ```
 
+#### ⚠️ IMPORTANT: Message Ordering
+
+The client **must** wait for all audio chunks to finish processing before sending `audio_complete`. The implementation in `voice-recorder.tsx` handles this by:
+
+1. Storing pending chunk promises in `pendingChunkRef`
+2. Waiting for the final chunk to complete in `mediaRecorder.onstop`
+3. Only then sending `audio_complete` message
+
+This prevents race conditions where `audio_complete` arrives before final chunks.
+
 **Event Subscription:**
+
 ```typescript
 subscribe('audio_processed', (data) => {
   console.log(`Turn ${data.payload.turn_number} saved`)

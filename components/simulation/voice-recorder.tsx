@@ -1,20 +1,48 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff } from 'lucide-react'
+import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff, RotateCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AudioWaveform } from './audio-waveform'
-import { useSimpleWebSocket } from '@/hooks/use-simple-websocket'
+import { useSimpleWebSocket, ConnectionState } from '@/hooks/use-simple-websocket'
 import { createSimulationSession } from '@/lib/simulation-api.service'
 import { useProducts } from '@/hooks/use-products'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 type RecordingState = 'idle' | 'recording' | 'processing'
 type SessionState = 'idle' | 'creating' | 'ready' | 'error'
+
+/**
+ * Detects the best supported audio format for MediaRecorder
+ * Returns both the MIME type and simplified format string for server
+ *
+ * Priority: OGG/Opus first (target format, no conversion needed on server)
+ */
+function getAudioFormat(): { mimeType: string; formatString: string } {
+  const formats = [
+    { mimeType: 'audio/ogg;codecs=opus', formatString: 'ogg' },    // Firefox - target format (no server conversion!)
+    { mimeType: 'audio/webm;codecs=opus', formatString: 'webm' },  // Chrome, Edge, Firefox fallback (fast remux)
+    { mimeType: 'audio/webm', formatString: 'webm' },              // Chrome, Edge fallback
+    { mimeType: 'audio/mp4', formatString: 'm4a' },                // Safari (requires transcoding)
+  ]
+
+  for (const format of formats) {
+    if (MediaRecorder.isTypeSupported(format.mimeType)) {
+      console.log('[VoiceRecorder] Selected audio format:', format.mimeType)
+      return format
+    }
+  }
+
+  // Fallback - should rarely happen on modern browsers
+  console.warn('[VoiceRecorder] No preferred format supported, using default')
+  return { mimeType: '', formatString: 'ogg' }
+}
 
 export function VoiceRecorder() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
@@ -25,6 +53,10 @@ export function VoiceRecorder() {
   const [isAnalyserReady, setIsAnalyserReady] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [selectedProductId, setSelectedProductId] = useState<string>('none')
+  const [audioFormat, setAudioFormat] = useState<string>('webm')
+
+  // Toast notifications
+  const { toast } = useToast()
 
   // Fetch products for selection
   const { data: products, isLoading: isLoadingProducts } = useProducts('active')
@@ -35,6 +67,7 @@ export function VoiceRecorder() {
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioSequenceRef = useRef(0)
   const hasInitializedSessionRef = useRef(false)
+  const pendingChunkRef = useRef<Promise<void> | null>(null)
 
   // WebSocket connection - ONLY connect if we have a session ID
   const baseUrl = process.env.NEXT_PUBLIC_SIMULATION_WS_URL || 'ws://localhost:5002/api/v1/simulations'
@@ -45,7 +78,11 @@ export function VoiceRecorder() {
     isConnected: isWSConnected,
     connectionState,
     error: wsError,
-    subscribe
+    subscribe,
+    reconnectAttempt,
+    maxReconnectAttempts,
+    isReconnecting,
+    manualReconnect
   } = useSimpleWebSocket({
     url: wsUrl || '', // Empty string prevents connection until session created
     debug: true,
@@ -118,6 +155,67 @@ export function VoiceRecorder() {
     }
   }, [wsError])
 
+  // Track previous connection state for toast notifications
+  const prevConnectionStateRef = useRef<ConnectionState>('disconnected')
+  const hadReconnectAttemptRef = useRef(false)
+
+  // Monitor connection state and show toast notifications
+  useEffect(() => {
+    // Skip toasts if session not ready yet
+    if (sessionState !== 'ready') return
+
+    const prevState = prevConnectionStateRef.current
+
+    // Track if we've had reconnection attempts
+    if (reconnectAttempt > 0) {
+      hadReconnectAttemptRef.current = true
+    }
+
+    // Connection lost - show toast on first disconnect
+    if (connectionState === 'disconnected' && prevState === 'connected' && reconnectAttempt === 1) {
+      toast({
+        title: 'Connection Lost',
+        description: 'Attempting to reconnect...',
+        variant: 'destructive',
+      })
+    }
+
+    // Successfully reconnected
+    if (connectionState === 'connected' && hadReconnectAttemptRef.current && reconnectAttempt === 0) {
+      toast({
+        title: 'Connection Restored',
+        description: 'You can continue using the simulation.',
+      })
+      hadReconnectAttemptRef.current = false
+    }
+
+    // Max reconnect attempts reached
+    if (connectionState === 'error' && reconnectAttempt >= maxReconnectAttempts) {
+      toast({
+        title: 'Connection Failed',
+        description: 'Please use the retry button below to reconnect.',
+        variant: 'destructive',
+      })
+    }
+
+    prevConnectionStateRef.current = connectionState
+  }, [connectionState, reconnectAttempt, maxReconnectAttempts, sessionState, toast])
+
+  // Stop recording immediately if connection is lost
+  useEffect(() => {
+    if (!isWSConnected && recordingState === 'recording') {
+      console.log('[VoiceRecorder] Connection lost during recording - stopping')
+      stopRecording()
+      toast({
+        title: 'Recording Stopped',
+        description: 'Connection lost - your recording has been stopped.',
+        variant: 'destructive',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWSConnected, recordingState, toast])
+  // Note: stopRecording is not in deps to avoid infinite loops - it's a stable function
+
   // Subscribe to audio_processed messages from server
   useEffect(() => {
     const unsubscribe = subscribe('audio_processed', (data: unknown) => {
@@ -177,44 +275,50 @@ export function VoiceRecorder() {
       analyserRef.current = analyser
       setIsAnalyserReady(true)
 
-      // Create MediaRecorder
-      const mediaRecorder = new MediaRecorder(mediaStream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm',
-      })
+      // Get best supported audio format
+      const detectedFormat = getAudioFormat()
+      setAudioFormat(detectedFormat.formatString)
+      console.log('[VoiceRecorder] Recording with format:', detectedFormat.formatString, 'MIME:', detectedFormat.mimeType)
 
-      mediaRecorder.ondataavailable = async (event) => {
+      // Create MediaRecorder with detected format
+      const mediaRecorder = new MediaRecorder(mediaStream,
+        detectedFormat.mimeType ? { mimeType: detectedFormat.mimeType } : {}
+      )
+
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           console.log('Data available:', event.data.size, 'bytes')
 
           // Stream audio chunk to WebSocket in base64 format (core-API spec)
           if (isWSConnected) {
-            try {
-              // Convert Blob to ArrayBuffer then to base64
-              const arrayBuffer = await event.data.arrayBuffer()
-              const uint8Array = new Uint8Array(arrayBuffer)
-              const base64Chunk = btoa(String.fromCharCode(...uint8Array))
+            // Store the promise so onstop can wait for it
+            pendingChunkRef.current = (async () => {
+              try {
+                // Convert Blob to ArrayBuffer then to base64
+                const arrayBuffer = await event.data.arrayBuffer()
+                const uint8Array = new Uint8Array(arrayBuffer)
+                const base64Chunk = btoa(String.fromCharCode(...uint8Array))
 
-              // Send as single JSON message per core-API spec
-              const message = {
-                type: 'audio_chunk',
-                payload: {
-                  chunk: base64Chunk,
-                  sequence: audioSequenceRef.current++,
-                  format: 'webm'
+                // Send as single JSON message per core-API spec
+                const message = {
+                  type: 'audio_chunk',
+                  payload: {
+                    chunk: base64Chunk,
+                    sequence: audioSequenceRef.current++,
+                    format: audioFormat  // Use detected format (webm, ogg, or m4a)
+                  }
                 }
-              }
 
-              const sent = sendWS(JSON.stringify(message))
-              if (!sent) {
-                console.warn('Failed to send audio chunk')
-              } else {
-                console.log('Sent audio chunk', message.payload.sequence, base64Chunk.length, 'bytes (base64)')
+                const sent = sendWS(JSON.stringify(message))
+                if (!sent) {
+                  console.warn('Failed to send audio chunk')
+                } else {
+                  console.log('Sent audio chunk', message.payload.sequence, base64Chunk.length, 'bytes (base64)')
+                }
+              } catch (err) {
+                console.error('Error sending audio chunk:', err)
               }
-            } catch (err) {
-              console.error('Error sending audio chunk:', err)
-            }
+            })()
           } else {
             console.warn('WebSocket not connected, dropping audio chunk')
           }
@@ -229,7 +333,20 @@ export function VoiceRecorder() {
         console.log('MediaRecorder stopped - Duration was:', recordingTime)
         setRecordingState('processing')
 
+        // CRITICAL: Wait for final chunk to finish processing before sending audio_complete
+        if (pendingChunkRef.current) {
+          console.log('Waiting for final audio chunk to finish processing...')
+          try {
+            await pendingChunkRef.current
+            console.log('Final chunk processed successfully')
+          } catch (err) {
+            console.error('Error waiting for final chunk:', err)
+          }
+          pendingChunkRef.current = null
+        }
+
         // Send audio_complete signal to server (core-API spec)
+        // This ensures the server receives all chunks BEFORE audio_complete
         if (isWSConnected) {
           console.log('Sending audio_complete signal')
           sendWS(JSON.stringify({ type: 'audio_complete' }))
@@ -376,6 +493,15 @@ export function VoiceRecorder() {
           </Badge>
         )
       case 'connecting':
+        // Show reconnection progress if reconnecting
+        if (isReconnecting) {
+          return (
+            <Badge variant="secondary" className="gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Reconnecting... ({reconnectAttempt}/{maxReconnectAttempts})
+            </Badge>
+          )
+        }
         return (
           <Badge variant="secondary" className="gap-1.5">
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -390,6 +516,15 @@ export function VoiceRecorder() {
           </Badge>
         )
       case 'disconnected':
+        // Show reconnection progress if reconnecting
+        if (isReconnecting) {
+          return (
+            <Badge variant="secondary" className="gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Reconnecting... ({reconnectAttempt}/{maxReconnectAttempts})
+            </Badge>
+          )
+        }
         return (
           <Badge variant="outline" className="gap-1.5">
             <WifiOff className="h-3 w-3" />
@@ -478,6 +613,27 @@ export function VoiceRecorder() {
         )}
       </AnimatePresence>
 
+      {/* Manual Retry Button - Show when max reconnect attempts reached */}
+      <AnimatePresence>
+        {connectionState === 'error' && reconnectAttempt >= maxReconnectAttempts && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Button
+              onClick={manualReconnect}
+              variant="outline"
+              className="gap-2"
+            >
+              <RotateCw className="h-4 w-4" />
+              Retry Connection
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 3D Flip Card Container - Show only after session creation */}
       {sessionState !== 'idle' && (
         <div className="relative w-full max-w-2xl h-[450px]" style={{ perspective: '1500px' }}>
@@ -522,19 +678,34 @@ export function VoiceRecorder() {
 
                   {/* AI Messages - Coming soon */}
 
-                  {/* Start Button */}
-                  <Button
-                    size="lg"
-                    onClick={startRecording}
-                    disabled={sessionState !== 'ready' || connectionState !== 'connected'}
-                    className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
-                  >
-                    {sessionState === 'creating' || connectionState === 'connecting' ? (
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    ) : (
-                      <Mic className="h-6 w-6" />
-                    )}
-                  </Button>
+                  {/* Start Button with Tooltip */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="lg"
+                          onClick={startRecording}
+                          disabled={sessionState !== 'ready' || connectionState !== 'connected'}
+                          className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
+                        >
+                          {sessionState === 'creating' || connectionState === 'connecting' ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            <Mic className="h-6 w-6" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      {(sessionState !== 'ready' || connectionState !== 'connected') && (
+                        <TooltipContent>
+                          <p>
+                            {sessionState !== 'ready'
+                              ? 'Waiting for session to be ready...'
+                              : 'Waiting for WebSocket connection...'}
+                          </p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
           </div>

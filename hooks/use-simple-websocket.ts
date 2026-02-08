@@ -22,6 +22,10 @@ export interface UseSimpleWebSocketReturn {
   connectionState: ConnectionState
   error: string | null
   subscribe: (messageType: string, handler: (data: unknown) => void) => () => void
+  reconnectAttempt: number
+  maxReconnectAttempts: number
+  isReconnecting: boolean
+  manualReconnect: () => void
 }
 
 export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpleWebSocketReturn {
@@ -29,10 +33,11 @@ export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpl
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
   const [error, setError] = useState<string | null>(null)
+  const [reconnectAttempt, setReconnectAttempt] = useState(0)
 
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectAttemptRef = useRef(0)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const isAuthenticatedRef = useRef(false)
   const eventHandlersRef = useRef<Map<string, Set<(data: unknown) => void>>>(new Map())
 
@@ -118,6 +123,7 @@ export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpl
       ws.onopen = () => {
         log('WebSocket opened - sending auth')
         reconnectAttemptRef.current = 0
+        setReconnectAttempt(0)
 
         // Send JWT auth as first message
         ws.send(JSON.stringify({ type: 'auth', token }))
@@ -179,10 +185,12 @@ export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpl
 
         // Reconnect logic
         if (reconnect && reconnectAttemptRef.current < maxReconnectAttempts) {
+          const nextAttempt = reconnectAttemptRef.current + 1
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000)
-          log(`Reconnecting in ${delay}ms (attempt ${reconnectAttemptRef.current + 1}/${maxReconnectAttempts})`)
+          log(`Reconnecting in ${delay}ms (attempt ${nextAttempt}/${maxReconnectAttempts})`)
 
-          reconnectAttemptRef.current++
+          reconnectAttemptRef.current = nextAttempt
+          setReconnectAttempt(nextAttempt)
           reconnectTimeoutRef.current = setTimeout(() => {
             connect()
           }, delay)
@@ -199,6 +207,24 @@ export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpl
       setConnectionState('error')
     }
   }, [url, reconnect, maxReconnectAttempts, log, connectionState])
+
+  // Manual reconnect function (resets attempt counter)
+  const manualReconnect = useCallback(() => {
+    log('Manual reconnect triggered')
+
+    // Clear any pending reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+    }
+
+    // Reset attempt counter
+    reconnectAttemptRef.current = 0
+    setReconnectAttempt(0)
+    setError(null)
+
+    // Reconnect
+    connect()
+  }, [log, connect])
 
   // Disconnect function
   const disconnect = useCallback(() => {
@@ -227,11 +253,17 @@ export function useSimpleWebSocket(options: UseSimpleWebSocketOptions): UseSimpl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]) // Reconnect when URL changes (e.g., when session ID becomes available)
 
+  const isReconnecting = reconnectAttempt > 0 && connectionState !== 'connected'
+
   return {
     send,
     isConnected: connectionState === 'connected',
     connectionState,
     error,
-    subscribe
+    subscribe,
+    reconnectAttempt,
+    maxReconnectAttempts,
+    isReconnecting,
+    manualReconnect
   }
 }

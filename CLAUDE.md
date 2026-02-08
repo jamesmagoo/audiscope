@@ -305,3 +305,4 @@ For detailed information on specific topics, see the following documentation:
 - **[Authentication System](docs/authentication.md)** - AWS Amplify authentication, login/signup flows, and route protection
 - **[Data Management with React Query](docs/react-query.md)** - TanStack React Query setup, patterns, and performance optimization
 - **[WebSocket Architecture](docs/websocket-architecture.md)** - Simple WebSocket hook, connection lifecycle, and Core-API protocol
+- **[Audio Transcoding Requirements](docs/audio-transcoding-requirements.md)** - Backend requirements for audio format conversion to OGG/Opus

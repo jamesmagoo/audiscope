@@ -186,6 +186,9 @@ Client can now send audio chunks and other messages
 - `sequence` (required): Chunk sequence number (starting from 1)
 - `format` (required): Audio format - one of: `webm`, `mp3`, `wav`, `ogg`, `m4a`
 
+**Backend Processing Note:**
+The server should accept all formats and transcode to OGG/Opus for AI processing. Safari users will send `m4a` format. See `docs/audio-transcoding-requirements.md` for implementation details.
+
 **Constraints:**
 - Max message size: **512KB** (including base64 encoding overhead ~33%)
 - Recommended chunk size: 10-50KB (before encoding)
@@ -199,7 +202,48 @@ Client can now send audio chunks and other messages
 }
 ```
 
+#### ⚠️ CRITICAL: Message Ordering Requirement
+
+The client **MUST** ensure all `audio_chunk` messages have been fully processed and sent **BEFORE** sending `audio_complete`.
+
+**Incorrect (broken) implementation:**
+
+```javascript
+// ❌ DON'T DO THIS
+mediaRecorder.stop();
+socket.send({ type: 'audio_complete' }); // Too early! Final chunk still processing
+```
+
+**Correct implementation:**
+
+```javascript
+// ✅ DO THIS
+let pendingChunk = null;
+
+mediaRecorder.ondataavailable = (event) => {
+  pendingChunk = processAndSendChunk(event.data); // Returns Promise
+};
+
+mediaRecorder.onstop = async () => {
+  // Wait for final chunk to finish processing
+  if (pendingChunk) {
+    await pendingChunk;
+  }
+
+  // NOW it's safe to send audio_complete
+  socket.send({ type: 'audio_complete' });
+};
+```
+
+**Why this matters:**
+
+- WebM/OGG containers require proper finalization
+- MediaRecorder fires `onstop` before final `ondataavailable` completes
+- Async operations (Blob→ArrayBuffer→base64) take time
+- Server must receive all chunks before starting file assembly
+
 **Server responds:**
+
 ```json
 {
   "type": "audio_processed",
