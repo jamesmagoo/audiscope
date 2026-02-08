@@ -5,8 +5,8 @@
 This document describes the WebSocket API for simulation audio streaming integration with the core-API backend.
 
 **Endpoint**: `ws://localhost:5002/api/v1/simulations/:id/stream`
-**Current Phase**: Phase 1 (Audio Storage) - Implemented
-**Next Phase**: Phase 2 (STT + AI Integration) - Planned
+**Current Phase**: Phase 2 (AI Audio Streaming) - Implemented
+**Next Phase**: Phase 3 (STT + AI Integration) - Planned
 
 ---
 
@@ -293,6 +293,92 @@ mediaRecorder.onstop = async () => {
 - `"no audio data buffered"` - Called `audio_complete` without sending chunks
 - `"failed to process audio: <reason>"` - Processing error
 - `"unknown message type: <type>"` - Invalid message type
+
+---
+
+## Phase 2: AI Audio Streaming (Implemented)
+
+### 6. `ai_audio_streaming_started` - AI Response Starting
+
+**Server sends:**
+```json
+{
+  "type": "ai_audio_streaming_started",
+  "session_id": "abc123-456-789",
+  "payload": {
+    "format": "mp3",
+    "sample_rate": 24000,
+    "total_chunks": 15
+  },
+  "timestamp": "2025-02-08T10:30:15Z"
+}
+```
+
+**Payload fields:**
+- `format` (string): Audio format - currently `"mp3"`
+- `sample_rate` (number): Sample rate in Hz - typically `24000`
+- `total_chunks` (number): Total number of audio chunks to expect
+
+**Purpose:**
+- Signals the start of AI audio response
+- Provides metadata for frontend audio initialization
+- Frontend should create AudioContext and prepare for playback
+
+### 7. `ai_audio_chunk` - AI Audio Data
+
+**Server sends:**
+```json
+{
+  "type": "ai_audio_chunk",
+  "session_id": "abc123-456-789",
+  "payload": {
+    "chunk_sequence": 1,
+    "total_chunks": 15,
+    "audio_chunk": "base64-encoded-mp3-data..."
+  },
+  "timestamp": "2025-02-08T10:30:16Z"
+}
+```
+
+**Payload fields:**
+- `chunk_sequence` (number): Current chunk number (1-indexed)
+- `total_chunks` (number): Total number of chunks (same as in `ai_audio_streaming_started`)
+- `audio_chunk` (string): Base64-encoded MP3 audio data
+
+**Frontend Processing:**
+1. Decode base64 to ArrayBuffer
+2. Decode MP3 to AudioBuffer using AudioContext.decodeAudioData()
+3. Add to audio queue for sequential playback
+4. Update progress indicator: `chunk_sequence / total_chunks`
+
+**Real-time Streaming:**
+- Frontend should buffer first 3-5 chunks before starting playback
+- Continue buffering and playing subsequent chunks
+- This provides smooth playback without gaps
+
+### 8. `ai_audio_complete` - AI Audio Finished
+
+**Server sends:**
+```json
+{
+  "type": "ai_audio_complete",
+  "session_id": "abc123-456-789",
+  "payload": {
+    "chunks_sent": 15,
+    "total_bytes": 480000
+  },
+  "timestamp": "2025-02-08T10:30:20Z"
+}
+```
+
+**Payload fields:**
+- `chunks_sent` (number): Total number of chunks sent
+- `total_bytes` (number): Total bytes of audio data sent (base64-encoded)
+
+**Purpose:**
+- Signals that all audio chunks have been sent
+- Frontend should finalize audio queue and play remaining buffered chunks
+- User can speak again after AI audio playback completes
 
 ---
 
@@ -610,19 +696,25 @@ if (message.type === 'error' && message.payload.code === 'auth_failed') {
 
 ## Phase Roadmap
 
-### Phase 1: Audio Storage (Implemented)
+### Phase 1: Audio Storage (Implemented ✅)
 - WebSocket connection with first-message authentication
 - Audio chunk streaming and buffering
 - S3 storage of complete audio turns
 - Database persistence of turns
 - Message types: `auth`, `auth_success`, `ping`, `pong`, `audio_chunk`, `audio_complete`, `audio_processed`, `error`
 
-### Phase 2: STT + AI Integration (Planned)
+### Phase 2: AI Audio Streaming (Implemented ✅)
+- Real-time AI audio response streaming
+- MP3 audio chunk delivery
+- Frontend audio playback with Web Audio API
+- Progress tracking and UI feedback
+- Message types: `ai_audio_streaming_started`, `ai_audio_chunk`, `ai_audio_complete`
+
+### Phase 3: STT + AI Integration (Planned)
 - Speech-to-text transcription (Gemini STT or AWS Transcribe)
-- AI coach responses (AWS Bedrock Claude)
-- Text-to-speech for AI responses
+- AI coach text responses (AWS Bedrock Claude)
 - Real-time feedback scoring (tone, content, pacing)
-- Additional message types: `transcript`, `ai_response`, `complete` (functional)
+- Additional message types: `transcript`, `ai_text_response`, `feedback_score`
 
 ---
 

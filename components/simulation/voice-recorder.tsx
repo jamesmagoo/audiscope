@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff, RotateCw } from 'lucide-react'
+import { Mic, Square, Loader2, AlertCircle, Wifi, WifiOff, RotateCw, Volume2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { base64ToArrayBuffer, decodeMP3, AudioQueue } from '@/lib/audio-utils'
 
 type RecordingState = 'idle' | 'recording' | 'processing'
 type SessionState = 'idle' | 'creating' | 'ready' | 'error'
@@ -55,6 +56,11 @@ export function VoiceRecorder() {
   const [selectedProductId, setSelectedProductId] = useState<string>('none')
   const [audioFormat, setAudioFormat] = useState<string>('webm')
 
+  // AI Audio State
+  const [aiSpeaking, setAiSpeaking] = useState(false)
+  const [aiAudioProgress, setAiAudioProgress] = useState<{ current: number; total: number } | null>(null)
+  const [isAiAnalyserReady, setIsAiAnalyserReady] = useState(false)
+
   // Toast notifications
   const { toast } = useToast()
 
@@ -68,6 +74,11 @@ export function VoiceRecorder() {
   const audioSequenceRef = useRef(0)
   const hasInitializedSessionRef = useRef(false)
   const pendingChunkRef = useRef<Promise<void> | null>(null)
+
+  // AI Audio Refs (separate from user microphone audio)
+  const aiAudioContextRef = useRef<AudioContext | null>(null)
+  const aiAnalyserRef = useRef<AnalyserNode | null>(null)
+  const aiAudioQueueRef = useRef<AudioQueue | null>(null)
 
   // WebSocket connection - ONLY connect if we have a session ID
   const baseUrl = process.env.NEXT_PUBLIC_SIMULATION_WS_URL || 'ws://localhost:5002/api/v1/simulations'
@@ -143,6 +154,13 @@ export function VoiceRecorder() {
       }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close()
+      }
+      // Cleanup AI audio resources
+      if (aiAudioQueueRef.current) {
+        aiAudioQueueRef.current.stop()
+      }
+      if (aiAudioContextRef.current && aiAudioContextRef.current.state !== 'closed') {
+        aiAudioContextRef.current.close()
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,6 +253,100 @@ export function VoiceRecorder() {
     return unsubscribe
   }, [subscribe])
 
+  // Subscribe to AI audio streaming messages
+  useEffect(() => {
+    // 1. AI audio streaming started
+    const unsubStart = subscribe('ai_audio_streaming_started', (data: unknown) => {
+      const message = data as { payload: { format: string; sample_rate: number; total_chunks: number } }
+      console.log('[VoiceRecorder] AI audio streaming started:', message.payload)
+
+      // Initialize AI audio playback
+      try {
+        // Create separate AudioContext for AI audio (don't interfere with mic)
+        const aiContext = new AudioContext()
+        const aiAnalyser = aiContext.createAnalyser()
+        aiAnalyser.fftSize = 2048
+        aiAnalyser.smoothingTimeConstant = 0.8
+
+        aiAudioContextRef.current = aiContext
+        aiAnalyserRef.current = aiAnalyser
+        setIsAiAnalyserReady(true)
+
+        // Create audio queue with completion callback
+        const onComplete = () => {
+          console.log('[VoiceRecorder] AI audio playback completed')
+          setAiSpeaking(false)
+          setAiAudioProgress(null)
+          setIsAiAnalyserReady(false)
+        }
+
+        aiAudioQueueRef.current = new AudioQueue(aiContext, aiAnalyser, onComplete)
+
+        // Set initial state
+        setAiSpeaking(true)
+        setAiAudioProgress({ current: 0, total: message.payload.total_chunks })
+      } catch (err) {
+        console.error('[VoiceRecorder] Failed to initialize AI audio:', err)
+        toast({
+          title: 'Audio Error',
+          description: 'Failed to initialize AI audio playback',
+          variant: 'destructive',
+        })
+      }
+    })
+
+    // 2. AI audio chunk received
+    const unsubChunk = subscribe('ai_audio_chunk', async (data: unknown) => {
+      const message = data as {
+        payload: { chunk_sequence: number; total_chunks: number; audio_chunk: string }
+      }
+      console.log(`[VoiceRecorder] AI audio chunk ${message.payload.chunk_sequence}/${message.payload.total_chunks}`)
+
+      try {
+        // Decode MP3 chunk
+        const arrayBuffer = base64ToArrayBuffer(message.payload.audio_chunk)
+        const audioContext = aiAudioContextRef.current
+
+        if (!audioContext) {
+          console.error('[VoiceRecorder] No AI audio context available')
+          return
+        }
+
+        const audioBuffer = await decodeMP3(audioContext, arrayBuffer)
+
+        // Add to playback queue
+        if (aiAudioQueueRef.current) {
+          aiAudioQueueRef.current.addChunk(message.payload.chunk_sequence, audioBuffer)
+        }
+
+        // Update progress
+        setAiAudioProgress({
+          current: message.payload.chunk_sequence,
+          total: message.payload.total_chunks,
+        })
+      } catch (err) {
+        console.error('[VoiceRecorder] Failed to process AI audio chunk:', err)
+      }
+    })
+
+    // 3. AI audio streaming complete
+    const unsubComplete = subscribe('ai_audio_complete', (data: unknown) => {
+      const message = data as { payload: { chunks_sent: number; total_bytes: number } }
+      console.log('[VoiceRecorder] AI audio complete:', message.payload)
+
+      // Signal to audio queue that all chunks received
+      if (aiAudioQueueRef.current) {
+        aiAudioQueueRef.current.finalize()
+      }
+    })
+
+    return () => {
+      unsubStart()
+      unsubChunk()
+      unsubComplete()
+    }
+  }, [subscribe, toast])
+
   useEffect(() => {
     console.log('Timer state changed:', recordingTime, 'Recording:', recordingState)
   }, [recordingTime, recordingState])
@@ -247,6 +359,12 @@ export function VoiceRecorder() {
       // Verify WebSocket is connected before proceeding
       if (!isWSConnected) {
         setError('WebSocket not connected. Please wait for connection.')
+        return
+      }
+
+      // Prevent recording while AI is speaking
+      if (aiSpeaking) {
+        setError('Please wait for AI to finish speaking.')
         return
       }
 
@@ -592,6 +710,14 @@ export function VoiceRecorder() {
       {sessionState !== 'idle' && (
         <div className="flex items-center gap-2">
           {getConnectionBadge()}
+
+          {/* AI Speaking Badge */}
+          {aiSpeaking && aiAudioProgress && (
+            <Badge variant="secondary" className="gap-1.5">
+              <Volume2 className="h-3 w-3" />
+              AI Speaking ({aiAudioProgress.current}/{aiAudioProgress.total})
+            </Badge>
+          )}
         </div>
       )}
 
@@ -678,6 +804,13 @@ export function VoiceRecorder() {
 
                   {/* AI Messages - Coming soon */}
 
+                  {/* AI Waveform - Show when AI is speaking */}
+                  {aiSpeaking && isAiAnalyserReady && aiAnalyserRef.current && (
+                    <div className="w-full">
+                      <AudioWaveform analyser={aiAnalyserRef.current} />
+                    </div>
+                  )}
+
                   {/* Start Button with Tooltip */}
                   <TooltipProvider>
                     <Tooltip>
@@ -685,7 +818,7 @@ export function VoiceRecorder() {
                         <Button
                           size="lg"
                           onClick={startRecording}
-                          disabled={sessionState !== 'ready' || connectionState !== 'connected'}
+                          disabled={sessionState !== 'ready' || connectionState !== 'connected' || aiSpeaking}
                           className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
                         >
                           {sessionState === 'creating' || connectionState === 'connecting' ? (
@@ -695,12 +828,14 @@ export function VoiceRecorder() {
                           )}
                         </Button>
                       </TooltipTrigger>
-                      {(sessionState !== 'ready' || connectionState !== 'connected') && (
+                      {(sessionState !== 'ready' || connectionState !== 'connected' || aiSpeaking) && (
                         <TooltipContent>
                           <p>
                             {sessionState !== 'ready'
                               ? 'Waiting for session to be ready...'
-                              : 'Waiting for WebSocket connection...'}
+                              : connectionState !== 'connected'
+                              ? 'Waiting for WebSocket connection...'
+                              : 'Waiting for AI to finish speaking...'}
                           </p>
                         </TooltipContent>
                       )}
