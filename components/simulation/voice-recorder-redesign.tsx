@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { base64ToArrayBuffer, decodeMP3, AudioQueue } from '@/lib/audio-utils'
 import { useChatHistory } from '@/hooks/use-chat-history'
-import { ChatSidebar } from './chat-sidebar'
 
 type RecordingState = 'idle' | 'recording' | 'processing'
 type SessionState = 'idle' | 'creating' | 'ready' | 'error'
@@ -66,9 +65,8 @@ export function VoiceRecorder() {
   const [aiAudioProgress, setAiAudioProgress] = useState<{ current: number; total: number } | null>(null)
   const [isAiAnalyserReady, setIsAiAnalyserReady] = useState(false)
 
-  // Chat History & UI State
+  // Chat History (keeping for backend integration, not displaying)
   const { messages, addMessage, updateMessage, getLatestAiMessage } = useChatHistory()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [selectedMicId, setSelectedMicId] = useState<string>('')
 
   // Toast notifications
@@ -250,18 +248,27 @@ export function VoiceRecorder() {
       const message = data as { payload: { turn_number: number; audio_url: string; status: string } }
       console.log('[VoiceRecorder] Audio processed:', message.payload)
 
+      // Add user message to chat history
+      addMessage({
+        id: `user-${message.payload.turn_number}`,
+        role: 'user',
+        audioUrl: message.payload.audio_url,
+        duration: recordingTime,
+        timestamp: new Date(),
+        turnNumber: message.payload.turn_number,
+      })
+
       // Reset to idle state after server confirms processing
       setRecordingState('idle')
 
       // Reset sequence counter for next turn
       audioSequenceRef.current = 0
 
-      // Could show turn number or status to user here
       console.log(`Turn ${message.payload.turn_number} saved: ${message.payload.status}`)
     })
 
     return unsubscribe
-  }, [subscribe])
+  }, [subscribe, addMessage, recordingTime])
 
   // Subscribe to AI audio streaming messages
   useEffect(() => {
@@ -356,6 +363,24 @@ export function VoiceRecorder() {
       unsubComplete()
     }
   }, [subscribe, toast])
+
+  // Subscribe to AI text response messages
+  useEffect(() => {
+    const unsubscribe = subscribe('ai_response_complete', (data: unknown) => {
+      const message = data as { payload: { response_text: string; tokens_used: number } }
+      console.log('[VoiceRecorder] AI response:', message.payload)
+
+      // Add AI text response to chat history
+      addMessage({
+        id: `ai-${Date.now()}`,
+        role: 'ai',
+        text: message.payload.response_text,
+        timestamp: new Date(),
+      })
+    })
+
+    return unsubscribe
+  }, [subscribe, addMessage])
 
   useEffect(() => {
     console.log('Timer state changed:', recordingTime, 'Recording:', recordingState)
@@ -691,259 +716,232 @@ export function VoiceRecorder() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[600px] gap-6">
-      {/* Product Selection - Show only if session not created yet */}
-      {sessionState === 'idle' && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-2xl space-y-4"
-        >
-          <div className="space-y-2">
-            <Label htmlFor="product-select">Select a Product (Optional)</Label>
-            <Select
-              value={selectedProductId}
-              onValueChange={setSelectedProductId}
-              disabled={isLoadingProducts}
+    <div className="h-screen w-full">
+      {/* Main Content Area */}
+      <div className="flex flex-col h-full w-full">
+        {/* Product Selection - Show only if session not created yet */}
+        {sessionState === 'idle' && (
+          <div className="flex items-center justify-center h-full">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md space-y-4"
             >
-              <SelectTrigger id="product-select" className="w-full">
-                <SelectValue placeholder={isLoadingProducts ? "Loading products..." : "No product (general training)"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No product (general training)</SelectItem>
-                {products?.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name} - {product.manufacturer}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              {selectedProductId === 'none'
-                ? "You'll practice general medical scenarios"
-                : "You'll practice discussing this specific product"}
-            </p>
+              <div className="space-y-2">
+                <Label htmlFor="product-select">Select a Product (Optional)</Label>
+                <Select
+                  value={selectedProductId}
+                  onValueChange={setSelectedProductId}
+                  disabled={isLoadingProducts}
+                >
+                  <SelectTrigger id="product-select" className="w-full">
+                    <SelectValue placeholder={isLoadingProducts ? "Loading products..." : "No product (general training)"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No product (general training)</SelectItem>
+                    {products?.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - {product.manufacturer}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProductId === 'none'
+                    ? "You'll practice general medical scenarios"
+                    : "You'll practice discussing this specific product"}
+                </p>
+              </div>
+
+              <Button
+                onClick={handleCreateSession}
+                disabled={isLoadingProducts}
+                className="w-full"
+              >
+                {isLoadingProducts ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading Products...
+                  </>
+                ) : (
+                  'Start Simulation Session'
+                )}
+              </Button>
+            </motion.div>
           </div>
-
-          <Button
-            onClick={handleCreateSession}
-            disabled={isLoadingProducts}
-            className="w-full"
-          >
-            {isLoadingProducts ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading Products...
-              </>
-            ) : (
-              'Start Simulation Session'
-            )}
-          </Button>
-        </motion.div>
-      )}
-
-      {/* Connection Status - Show after session creation starts */}
-      {sessionState !== 'idle' && (
-        <div className="flex items-center gap-2">
-          {getConnectionBadge()}
-
-          {/* AI Speaking Badge */}
-          {aiSpeaking && aiAudioProgress && (
-            <Badge variant="secondary" className="gap-1.5">
-              <Volume2 className="h-3 w-3" />
-              AI Speaking ({aiAudioProgress.current}/{aiAudioProgress.total})
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Error Alert */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className="w-full max-w-2xl"
-          >
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* Manual Retry Button - Show when max reconnect attempts reached */}
-      <AnimatePresence>
-        {connectionState === 'error' && reconnectAttempt >= maxReconnectAttempts && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Button
-              onClick={manualReconnect}
-              variant="outline"
-              className="gap-2"
-            >
-              <RotateCw className="h-4 w-4" />
-              Retry Connection
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Main Chat Interface - Show after session creation */}
+        {sessionState !== 'idle' && (
+          <>
+            {/* Header with connection status and mic selector */}
+            <div className="w-full border-b border-border p-4">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-4">
+                  {/* Connection Badge */}
+                  {getConnectionBadge()}
 
-      {/* 3D Flip Card Container - Show only after session creation */}
-      {sessionState !== 'idle' && (
-        <div className="relative w-full max-w-2xl h-[450px]" style={{ perspective: '1500px' }}>
-
-        {/* The Actual Card that Flips */}
-        <motion.div
-          className="relative w-full h-full"
-          style={{
-            transformStyle: 'preserve-3d',
-            transformOrigin: 'center center'
-          }}
-          animate={{
-            rotateY: recordingState === 'recording' ? 180 : 0
-          }}
-          transition={{
-            duration: 0.6,
-            ease: [0.645, 0.045, 0.355, 1.000] // easeInOutCubic
-          }}
-        >
-
-          {/* FRONT SIDE - Idle/Start Recording */}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center"
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(0deg)',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-              <div className="relative rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl shadow-xl w-full max-w-xl min-h-[400px] p-8">
-                <div className="flex flex-col items-center justify-center space-y-6 h-full">
-                  {/* Title */}
-                  <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-bold tracking-tight">
-                      AI Simulation
-                    </h1>
-                    <p className="text-muted-foreground text-sm">
-                      Click to begin voice conversation
-                    </p>
-                  </div>
-
-                  {/* AI Messages - Coming soon */}
-
-                  {/* AI Waveform - Show when AI is speaking */}
-                  {aiSpeaking && isAiAnalyserReady && aiAnalyserRef.current && (
-                    <div className="w-full">
-                      <AudioWaveform analyser={aiAnalyserRef.current} />
-                    </div>
+                  {/* AI Speaking Badge */}
+                  {aiSpeaking && aiAudioProgress && (
+                    <Badge variant="secondary" className="gap-1.5">
+                      <Volume2 className="h-3 w-3" />
+                      AI Speaking ({aiAudioProgress.current}/{aiAudioProgress.total})
+                    </Badge>
                   )}
+                </div>
 
-                  {/* Start Button with Tooltip */}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="lg"
-                          onClick={startRecording}
-                          disabled={sessionState !== 'ready' || connectionState !== 'connected' || aiSpeaking}
-                          className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
-                        >
-                          {sessionState === 'creating' || connectionState === 'connecting' ? (
-                            <Loader2 className="h-6 w-6 animate-spin" />
-                          ) : (
-                            <Mic className="h-6 w-6" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      {(sessionState !== 'ready' || connectionState !== 'connected' || aiSpeaking) && (
-                        <TooltipContent>
-                          <p>
-                            {sessionState !== 'ready'
-                              ? 'Waiting for session to be ready...'
-                              : connectionState !== 'connected'
-                              ? 'Waiting for WebSocket connection...'
-                              : 'Waiting for AI to finish speaking...'}
-                          </p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                {/* Mic Selector */}
+                <div className="flex items-center gap-2">
+                  <MicSelector
+                    value={selectedMicId}
+                    onValueChange={setSelectedMicId}
+                    muted={false}
+                    onMutedChange={() => {}}
+                    className="w-64"
+                  />
                 </div>
               </div>
-          </div>
+            </div>
 
-          {/* BACK SIDE - Recording/Active */}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center"
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-            <div className="relative rounded-2xl border border-border/50 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl shadow-xl w-full max-w-xl min-h-[400px] p-8">
-              <div className="flex flex-col items-center justify-center space-y-4 h-full">
-                {/* Timer */}
-                <div className="text-center space-y-2">
-                  <div className="text-5xl font-mono font-bold tracking-tight tabular-nums">
-                    {formatTime(recordingTime)}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground justify-center">
-                    <div className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
-                    <span>Recording</span>
-                  </div>
-                </div>
+            {/* Error Alert */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-4"
+                >
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                {/* Waveform */}
-                {recordingState === 'recording' && isAnalyserReady && analyserRef.current && (
-                  <div className="w-full">
-                    <AudioWaveform analyser={analyserRef.current} />
+            {/* Manual Retry Button */}
+            <AnimatePresence>
+              {connectionState === 'error' && reconnectAttempt >= maxReconnectAttempts && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-center p-4"
+                >
+                  <Button
+                    onClick={manualReconnect}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <RotateCw className="h-4 w-4" />
+                    Retry Connection
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Center Stage - Orb / Waveform / Voice Button */}
+            <div className="flex-1 flex flex-col items-center justify-center p-8 relative w-full">
+              {/* Main Visual Element */}
+              <div className="relative w-full max-w-3xl mx-auto flex flex-col items-center justify-center space-y-8">
+                {/* Orb - Show when idle or AI speaking */}
+                {(recordingState === 'idle' || recordingState === 'processing' || aiSpeaking) && (
+                  <div className="w-[280px] h-[280px]">
+                    <Orb
+                      agentState={getOrbState()}
+                      volumeMode="auto"
+                      getOutputVolume={getAiAudioVolume}
+                      colors={["#CADCFC", "#00A8FF"]}
+                    />
                   </div>
                 )}
 
-                {/* Stop Button */}
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  onClick={stopRecording}
-                  className="h-16 w-16 rounded-full shadow-lg hover:scale-105 transition-all duration-300"
-                >
-                  <Square className="h-5 w-5 fill-current" />
-                </Button>
+                {/* LiveWaveform - Show when recording */}
+                {recordingState === 'recording' && (
+                  <div className="w-full max-w-2xl mx-auto">
+                    <LiveWaveform
+                      active={true}
+                      mode="static"
+                      height={120}
+                      barWidth={3}
+                      barGap={1}
+                      sensitivity={1.2}
+                      smoothingTimeConstant={0.8}
+                    />
+
+                    {/* Recording indicator */}
+                    <div className="flex items-center justify-center gap-2 mt-4 text-sm text-muted-foreground">
+                      <div className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                      <span>Recording</span>
+                      <span className="font-mono">{formatTime(recordingTime)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Voice Control Button */}
+                <div className="flex flex-col items-center gap-4">
+                  {recordingState === 'idle' || recordingState === 'processing' ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="lg"
+                            onClick={startRecording}
+                            disabled={
+                              sessionState !== 'ready' ||
+                              connectionState !== 'connected' ||
+                              aiSpeaking ||
+                              recordingState === 'processing'
+                            }
+                            className="h-20 w-20 rounded-full shadow-lg hover:scale-105 transition-all duration-300"
+                          >
+                            {sessionState === 'creating' || connectionState === 'connecting' || recordingState === 'processing' ? (
+                              <Loader2 className="h-8 w-8 animate-spin" />
+                            ) : (
+                              <Mic className="h-8 w-8" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        {(sessionState !== 'ready' || connectionState !== 'connected' || aiSpeaking || recordingState === 'processing') && (
+                          <TooltipContent>
+                            <p>
+                              {sessionState !== 'ready'
+                                ? 'Waiting for session...'
+                                : connectionState !== 'connected'
+                                ? 'Connecting...'
+                                : recordingState === 'processing'
+                                ? 'Processing audio...'
+                                : 'AI is speaking...'}
+                            </p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button
+                      size="lg"
+                      variant="destructive"
+                      onClick={stopRecording}
+                      className="h-20 w-20 rounded-full shadow-lg hover:scale-105 transition-all duration-300"
+                    >
+                      <Square className="h-6 w-6 fill-current" />
+                    </Button>
+                  )}
+
+                  {/* Status text */}
+                  <p className="text-sm text-muted-foreground">
+                    {recordingState === 'idle' && !aiSpeaking && 'Click to start speaking'}
+                    {recordingState === 'recording' && 'Recording your voice...'}
+                    {recordingState === 'processing' && 'Processing...'}
+                    {aiSpeaking && 'AI is responding...'}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
-        </div>
-      )}
-
-      {/* Processing State - Overlay */}
-      <AnimatePresence>
-        {recordingState === 'processing' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50"
-          >
-            <div className="text-center space-y-4">
-              <Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" />
-              <h2 className="text-3xl font-bold">Processing...</h2>
-              <p className="text-muted-foreground">Analyzing your audio</p>
-            </div>
-          </motion.div>
+          </>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   )
 }
