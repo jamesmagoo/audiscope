@@ -173,6 +173,10 @@ proxy WebSockets), so the server needs CORS for the web app origins. Contract
 and architecture: `ai_docs/agent-server-http-contract.md`,
 `ai_docs/chat-interface-architecture.md`.
 
+For how backend URLs are hidden from the client (the `/api/core/*` rewrite +
+server-only `CORE_API_URL`), which backends are exposed, and how to extend the
+proxy pattern, see `ai_docs/backend-url-proxying.md`.
+
 #### AWS Bedrock Knowledge Base
 ```bash
 NEXT_PUBLIC_KNOWLEDGE_BASE_ID=your-knowledge-base-id
