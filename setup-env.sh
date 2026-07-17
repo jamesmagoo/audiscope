@@ -62,6 +62,17 @@ KB_ID=${KB_ID:-5WDOTFQ8QC}
 read -p "Staging Core API URL (optional): " STAGING_API
 STAGING_API=${STAGING_API:-https://your-staging-api.example.com}
 
+# Agent Server (AG-UI WebSocket + session HTTP API)
+read -p "Agent Server host for cloud/staging (optional) [localhost:8000]: " AGENT_HOST
+AGENT_HOST=${AGENT_HOST:-localhost:8000}
+if [[ "$AGENT_HOST" == localhost* ]]; then
+    AGENT_WS_URL="ws://${AGENT_HOST}/ws/agent"
+    AGENT_API_URL="http://${AGENT_HOST}"
+else
+    AGENT_WS_URL="wss://${AGENT_HOST}/ws/agent"
+    AGENT_API_URL="https://${AGENT_HOST}"
+fi
+
 echo ""
 echo "✨ Creating environment files..."
 echo ""
@@ -85,6 +96,11 @@ NEXT_PUBLIC_CORE_API_URL=${DEV_CORE_API}/api
 
 # AWS Bedrock Knowledge Base
 NEXT_PUBLIC_KNOWLEDGE_BASE_ID=${KB_ID}
+
+# Agent Server (AG-UI WebSocket + session HTTP API)
+# Next.js rewrites cannot proxy WebSockets - the browser connects directly
+NEXT_PUBLIC_AGENT_WS_URL=${AGENT_WS_URL}
+NEXT_PUBLIC_AGENT_API_URL=${AGENT_API_URL}
 
 # Sentry (disabled for development)
 NEXT_PUBLIC_SENTRY_DSN=
@@ -118,6 +134,10 @@ NEXT_PUBLIC_KNOWLEDGE_BASE_ID=${KB_ID}
 # LocalStack S3 Override
 NEXT_PUBLIC_S3_ENDPOINT_OVERRIDE=http://localhost:4566
 
+# Agent Server (AG-UI WebSocket + session HTTP API - local)
+NEXT_PUBLIC_AGENT_WS_URL=ws://localhost:8000/ws/agent
+NEXT_PUBLIC_AGENT_API_URL=http://localhost:8000
+
 # Sentry (disabled for development)
 NEXT_PUBLIC_SENTRY_DSN=
 SENTRY_AUTH_TOKEN=
@@ -146,6 +166,10 @@ NEXT_PUBLIC_CORE_API_URL=${STAGING_API}/api
 
 # AWS Bedrock Knowledge Base
 NEXT_PUBLIC_KNOWLEDGE_BASE_ID=${KB_ID}
+
+# Agent Server (AG-UI WebSocket + session HTTP API)
+NEXT_PUBLIC_AGENT_WS_URL=${AGENT_WS_URL}
+NEXT_PUBLIC_AGENT_API_URL=${AGENT_API_URL}
 
 # Sentry (optional for staging)
 NEXT_PUBLIC_SENTRY_DSN=

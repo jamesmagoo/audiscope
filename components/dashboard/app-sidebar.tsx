@@ -8,6 +8,7 @@ import {
   Users,
   BarChart3,
   BookOpen,
+  Bot,
   Package,
   GraduationCap,
   ClipboardCheck,
@@ -51,6 +52,7 @@ export function AppSidebar() {
   const navItems = [
     { name: "Product Library", href: "/dashboard/products", icon: Package, disabled: false },
     { name: "Learning Hub", href: "/dashboard/learning", icon: GraduationCap, disabled: false },
+    { name: "Assistant", href: "/dashboard/assistant", icon: Bot, disabled: false },
     { name: "Content Management", href: "/dashboard/content", icon: FileEdit, disabled: false },
     { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true, showDisabled: true },
     { name: "Team Management", href: "/dashboard/team", icon: Users, disabled: true, showDisabled: true },

@@ -13,6 +13,7 @@ export interface MessageType {
   sender: "user" | "assistant"
   timestamp: Date
   isLoading?: boolean
+  isStreaming?: boolean
 }
 
 interface MessageProps {
@@ -65,16 +66,18 @@ export function Message({ message }: MessageProps) {
             </span>
           </div>
           
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={handleCopy}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
+          {!message.isStreaming && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={handleCopy}
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -94,7 +97,7 @@ export function Message({ message }: MessageProps) {
             </p>
           ) : (
             <div className="text-sm leading-relaxed">
-              <ReactMarkdown 
+              <ReactMarkdown
                 components={{
                 p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
                 ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
@@ -121,6 +124,12 @@ export function Message({ message }: MessageProps) {
               >
                 {message.content}
               </ReactMarkdown>
+              {message.isStreaming && (
+                <span
+                  className="inline-block w-2 h-4 bg-current animate-pulse align-text-bottom"
+                  aria-hidden="true"
+                />
+              )}
             </div>
           )}
         </div>

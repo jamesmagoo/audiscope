@@ -158,6 +158,21 @@ NEXT_PUBLIC_API_URL=https://api.example.com
 NEXT_PUBLIC_CORE_API_URL=https://api.example.com/api
 ```
 
+**Backend 3: Agent Server (AudiScope Assistant — AG-UI over WebSocket)**
+```bash
+# Local development (separate FastAPI service)
+NEXT_PUBLIC_AGENT_WS_URL=ws://localhost:8000/ws/agent
+NEXT_PUBLIC_AGENT_API_URL=http://localhost:8000
+
+# Production/Staging (must be wss:// — pages are https)
+NEXT_PUBLIC_AGENT_WS_URL=wss://agent.example.com/ws/agent
+NEXT_PUBLIC_AGENT_API_URL=https://agent.example.com
+```
+The browser connects to the agent server **directly** (Next.js rewrites cannot
+proxy WebSockets), so the server needs CORS for the web app origins. Contract
+and architecture: `ai_docs/agent-server-http-contract.md`,
+`ai_docs/chat-interface-architecture.md`.
+
 #### AWS Bedrock Knowledge Base
 ```bash
 NEXT_PUBLIC_KNOWLEDGE_BASE_ID=your-knowledge-base-id
@@ -312,6 +327,10 @@ While not currently configured, consider adding:
 - Prettier for automatic code formatting
 
 ## Development Workflow
+
+### Commit Convention
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): description` — e.g. `feat(assistant): stream replies over WebSocket`, `fix(upload): handle presigned URL expiry`. Types: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`, `perf`, `ci`.
 
 ### Common Development Tasks
 1. **Adding new components**: Follow existing patterns in `components/` directory

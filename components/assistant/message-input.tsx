@@ -10,12 +10,16 @@ interface MessageInputProps {
   onSendMessage: (content: string, files?: File[]) => void
   disabled?: boolean
   placeholder?: string
+  isStreaming?: boolean
+  onStop?: () => void
 }
 
-export function MessageInput({ 
-  onSendMessage, 
-  disabled = false, 
-  placeholder = "Ask about your assessments, training protocols, or clinical procedures..." 
+export function MessageInput({
+  onSendMessage,
+  disabled = false,
+  placeholder = "Ask about your assessments, training protocols, or clinical procedures...",
+  isStreaming = false,
+  onStop
 }: MessageInputProps) {
   const [message, setMessage] = useState("")
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
@@ -32,6 +36,7 @@ export function MessageInput({
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
+    if (isStreaming) return
     if (message.trim() || attachedFiles.length > 0) {
       onSendMessage(message.trim(), attachedFiles)
       setMessage("")
@@ -75,7 +80,7 @@ export function MessageInput({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  const canSend = (message.trim().length > 0 || attachedFiles.length > 0) && !disabled
+  const canSend = (message.trim().length > 0 || attachedFiles.length > 0) && !disabled && !isStreaming
 
   return (
     <div className="border-t border-border bg-background">
@@ -145,22 +150,35 @@ export function MessageInput({
             </div>
           </div>
 
-          {/* Send button */}
-          <Button
-            type="submit"
-            size="sm"
-            variant="default"
-            className={cn(
-              "h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
-            )}
-            disabled={!canSend}
-          >
-            {disabled ? (
+          {/* Send / stop button */}
+          {isStreaming ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
+              onClick={onStop}
+              aria-label="Stop generating"
+            >
               <Square className="h-4 w-4" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="sm"
+              variant="default"
+              className={cn(
+                "h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
+              )}
+              disabled={!canSend}
+            >
+              {disabled ? (
+                <Square className="h-4 w-4" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Helpful tips */}
