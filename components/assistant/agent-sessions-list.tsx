@@ -63,7 +63,7 @@ export function AgentSessionsList({ activeSessionId, onSelectSession }: AgentSes
 
   return (
     <>
-      <div className="flex flex-col h-full min-h-0">
+      <div className="flex flex-1 flex-col h-full min-h-0">
         {/* Header */}
         <div className="p-3 border-b flex-shrink-0 space-y-2">
           <Button onClick={() => onSelectSession(null)} className="w-full h-8 text-xs">

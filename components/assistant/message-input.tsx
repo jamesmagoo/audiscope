@@ -12,6 +12,8 @@ interface MessageInputProps {
   placeholder?: string
   isStreaming?: boolean
   onStop?: () => void
+  /** Fires when the user focuses/blurs the input — lets the view show a "listening" state. */
+  onComposingChange?: (composing: boolean) => void
 }
 
 export function MessageInput({
@@ -19,7 +21,8 @@ export function MessageInput({
   disabled = false,
   placeholder = "Ask about your assessments, training protocols, or clinical procedures...",
   isStreaming = false,
-  onStop
+  onStop,
+  onComposingChange
 }: MessageInputProps) {
   const [message, setMessage] = useState("")
   const [attachedFiles, setAttachedFiles] = useState<File[]>([])
@@ -105,14 +108,19 @@ export function MessageInput({
       )}
 
       {/* Input Area */}
-      <form onSubmit={handleSubmit} className="p-4">
-        <div className="relative flex items-end gap-3">
-          {/* File attachment button */}
+      <form onSubmit={handleSubmit} className="p-4 pt-3">
+        <div
+          className={cn(
+            "flex items-end gap-2 rounded-2xl border bg-background p-2 pl-4 shadow-sm",
+            "transition-shadow focus-within:border-ring focus-within:ring-1 focus-within:ring-ring"
+          )}
+        >
+          {/* File attachment button (hidden until uploads are supported) */}
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-10 w-10 p-0 flex-shrink-0 self-end hidden"
+            className="h-9 w-9 p-0 flex-shrink-0 self-end hidden"
             onClick={handleFileAttachment}
             disabled={disabled}
           >
@@ -128,27 +136,22 @@ export function MessageInput({
             className="hidden"
           />
 
-          {/* Message textarea */}
-          <div className="flex-1 relative">
-            <Textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder={placeholder}
-              disabled={disabled}
-              className={cn(
-                "min-h-[60px] max-h-[200px] resize-none pr-12",
-                "scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-              )}
-              rows={1}
-            />
-            
-            {/* Character count */}
-            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-              {message.length}/4000
-            </div>
-          </div>
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyPress}
+            onFocus={() => onComposingChange?.(true)}
+            onBlur={() => onComposingChange?.(false)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={cn(
+              "min-h-[40px] max-h-[200px] flex-1 resize-none border-0 bg-transparent p-1 shadow-none",
+              "focus-visible:ring-0 focus-visible:ring-offset-0",
+              "scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+            )}
+            rows={1}
+          />
 
           {/* Send / stop button */}
           {isStreaming ? (
@@ -156,35 +159,34 @@ export function MessageInput({
               type="button"
               size="sm"
               variant="destructive"
-              className="h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
+              className="h-9 w-9 flex-shrink-0 rounded-xl p-0"
               onClick={onStop}
               aria-label="Stop generating"
             >
-              <Square className="h-4 w-4" />
+              <Square className="h-3.5 w-3.5" />
             </Button>
           ) : (
             <Button
               type="submit"
               size="sm"
               variant="default"
-              className={cn(
-                "h-10 w-10 p-0 flex-shrink-0 self-center transition-all"
-              )}
+              className="h-9 w-9 flex-shrink-0 rounded-xl p-0 transition-all disabled:opacity-40"
               disabled={!canSend}
+              aria-label="Send message"
             >
-              {disabled ? (
-                <Square className="h-4 w-4" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+              <Send className="h-4 w-4" />
             </Button>
           )}
         </div>
 
-        {/* Helpful tips */}
-        <div className="mt-2 text-xs text-muted-foreground">
-          Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> to send, 
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Shift + Enter</kbd> for new line
+        <div className="mt-1.5 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+          <span>
+            <kbd className="rounded bg-muted px-1 py-0.5">Enter</kbd> to send ·{" "}
+            <kbd className="rounded bg-muted px-1 py-0.5">Shift+Enter</kbd> for a new line
+          </span>
+          <span className={cn(message.length > 3800 && "text-destructive")}>
+            {message.length}/4000
+          </span>
         </div>
       </form>
     </div>
